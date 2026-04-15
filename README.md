@@ -12,7 +12,7 @@ Escape the terminal-based CLI and leverage all Claude Code features through an i
 
 ## Screenshots
 
-> Screenshots coming soon
+![Clarc Screenshot](docs/screenshot.png)
 
 ---
 

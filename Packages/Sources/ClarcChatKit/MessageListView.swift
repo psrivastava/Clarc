@@ -198,13 +198,17 @@ fileprivate struct MessageGroup: Identifiable {
 /// Returns true if the message would render only a transient tool summary (no visible text or non-transient tools).
 fileprivate func isPureTransientMessage(_ message: ChatMessage) -> Bool {
     guard message.role == .assistant, !message.isError, !message.isCompactBoundary else { return false }
-    let hasVisibleText = message.blocks.contains { ($0.text.map { !$0.isEmpty }) ?? false }
+    // Whitespace-only text is treated as invisible so it doesn't break transient grouping.
+    let hasVisibleText = message.blocks.contains {
+        guard let text = $0.text else { return false }
+        return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
     if hasVisibleText { return false }
     let toolCalls = message.blocks.compactMap(\.toolCall)
     guard !toolCalls.isEmpty else { return false }
     let hasNonTransient = toolCalls.contains { !ToolCategory(toolName: $0.name).isTransient }
     if hasNonTransient { return false }
-    return toolCalls.contains { $0.hasNonEmptyResult }
+    return true
 }
 
 /// Returns true if the message has no renderable content — all tool calls were removed

@@ -281,7 +281,7 @@ public struct SlashCommandManagerView: View {
                         }
                     }
 
-                    Text(cmd.description)
+                    Text(LocalizedStringKey(cmd.description), bundle: .module)
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -505,29 +505,31 @@ struct SlashCommandEditView: View {
                     // Option toggles
                     VStack(spacing: 12) {
                         HStack {
-                            Toggle(isOn: $acceptsInput) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Accepts Input", bundle: .module)
-                                        .font(.system(size: 13, weight: .medium))
-                                    Text("Allows additional text to be entered after the command", bundle: .module)
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(.secondary)
-                                }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Accepts Input", bundle: .module)
+                                    .font(.system(size: 13, weight: .medium))
+                                Text("Allows additional text to be entered after the command", bundle: .module)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
                             }
-                            .toggleStyle(.switch)
+                            Spacer()
+                            Toggle("", isOn: $acceptsInput)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
                         }
 
                         HStack {
-                            Toggle(isOn: $isInteractive) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Interactive (Terminal)", bundle: .module)
-                                        .font(.system(size: 13, weight: .medium))
-                                    Text("Commands requiring TUI will run in the inline terminal", bundle: .module)
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(.secondary)
-                                }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Interactive (Terminal)", bundle: .module)
+                                    .font(.system(size: 13, weight: .medium))
+                                Text("Commands requiring TUI will run in the inline terminal", bundle: .module)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
                             }
-                            .toggleStyle(.switch)
+                            Spacer()
+                            Toggle("", isOn: $isInteractive)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
                         }
                     }
                 }

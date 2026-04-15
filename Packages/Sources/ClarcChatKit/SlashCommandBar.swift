@@ -446,7 +446,7 @@ struct SlashCommandPopup: View {
                             }
                         }
 
-                        Text(LocalizedStringKey(cmd.description))
+                        Text(LocalizedStringKey(cmd.description), bundle: .module)
                             .font(.system(size: 11))
                             .foregroundStyle(ClaudeTheme.textSecondary)
                             .lineLimit(1)
@@ -500,7 +500,7 @@ struct CommandDetailSheet: View {
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundStyle(ClaudeTheme.textPrimary)
 
-                    Text(LocalizedStringKey(command.description))
+                    Text(LocalizedStringKey(command.description), bundle: .module)
                         .font(.system(size: 13))
                         .foregroundStyle(ClaudeTheme.textSecondary)
                 }

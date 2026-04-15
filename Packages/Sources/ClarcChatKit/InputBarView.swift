@@ -279,7 +279,7 @@ struct InputBarView: View {
         let hasString = pb.string(forType: .string) != nil
         let hasFileURL = (pb.readObjects(forClasses: [NSURL.self]) as? [URL])?.contains(where: \.isFileURL) == true
         let hasImageData = pb.data(forType: .tiff) != nil || pb.data(forType: .png) != nil
-        if !hasString && (hasFileURL || hasImageData) {
+        if hasImageData || (!hasString && hasFileURL) {
             if let result = detectPasteContent() {
                 switch result {
                 case .attachment(let att): windowState.addAttachment(att)

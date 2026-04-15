@@ -36,6 +36,7 @@ struct SkillMarketView: View {
                 onInstall: {},
                 onUninstall: {}
             )
+            .focusable(false)
         }
     }
 

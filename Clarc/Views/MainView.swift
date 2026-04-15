@@ -49,6 +49,7 @@ struct MainView: View {
                                     }
                                 }
                             SkillMarketView()
+                                .focusable(false)
                                 .transition(.asymmetric(
                                     insertion: .move(edge: .bottom).combined(with: .opacity),
                                     removal: .opacity

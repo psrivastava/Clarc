@@ -207,6 +207,14 @@ fileprivate func isPureTransientMessage(_ message: ChatMessage) -> Bool {
     return toolCalls.contains { $0.hasNonEmptyResult }
 }
 
+/// Returns true if the message has no renderable content — all tool calls were removed
+/// (e.g. empty bash output stripped by setToolResult) and there is no text.
+/// These messages are invisible in the UI and should not break transient-tool grouping.
+fileprivate func isInvisibleMessage(_ message: ChatMessage) -> Bool {
+    guard message.role == .assistant, !message.isError, !message.isCompactBoundary, !message.isStreaming else { return false }
+    return message.blocks.isEmpty
+}
+
 /// Groups consecutive pure-transient assistant messages into combined groups.
 /// - Parameter minGroupSize: Minimum number of transient messages required to collapse into a group.
 ///   Pass 1 (streaming context) to hide even a single completed tool call the moment the next message starts.
@@ -230,6 +238,10 @@ fileprivate func groupMessages(_ messages: [ChatMessage], minGroupSize: Int = 2)
     for message in messages {
         if isPureTransientMessage(message) {
             accumulator.append(message)
+        } else if isInvisibleMessage(message) {
+            // Skip invisible messages (e.g. all tool calls removed due to empty results).
+            // They render nothing in the UI and must not break consecutive transient grouping.
+            continue
         } else {
             flushAccumulator()
             result.append(MessageGroup(id: message.id, messages: [message], isTransientGroup: false))

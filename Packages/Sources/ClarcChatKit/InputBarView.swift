@@ -111,6 +111,14 @@ struct InputBarView: View {
         .onAppear {
             isInputFocused = true
             lastPasteChangeCount = NSPasteboard.general.changeCount
+            if let path = windowState.selectedProject?.path {
+                AtFileSearch.prefetch(projectPath: path)
+            }
+        }
+        .onChange(of: windowState.selectedProject?.path) { _, newPath in
+            if let path = newPath {
+                AtFileSearch.prefetch(projectPath: path)
+            }
         }
         .contentShape(Rectangle())
         .onTapGesture { isInputFocused = true }
@@ -286,7 +294,7 @@ struct InputBarView: View {
         let pb = NSPasteboard.general
         let hasString = pb.string(forType: .string) != nil
         let hasFileURL = (pb.readObjects(forClasses: [NSURL.self]) as? [URL])?.contains(where: \.isFileURL) == true
-        let hasImageData = pb.data(forType: .tiff) != nil || pb.data(forType: .png) != nil
+        let hasImageData = pb.canReadItem(withDataConformingToTypes: [UTType.image.identifier])
         if hasImageData || (!hasString && hasFileURL) {
             if let result = detectPasteContent() {
                 switch result {
@@ -572,6 +580,13 @@ struct InputBarView: View {
             if let data = pb.data(forType: type) {
                 return .attachment(Attachment(type: .image, name: "clipboard-\(UUID().uuidString.prefix(8)).png", imageData: data))
             }
+        }
+        // Fallback: handles JPEG, HEIC, and other image formats not caught above
+        if let image = NSImage(pasteboard: pb),
+           let tiffData = image.tiffRepresentation,
+           let bitmapRep = NSBitmapImageRep(data: tiffData),
+           let pngData = bitmapRep.representation(using: .png, properties: [:]) {
+            return .attachment(Attachment(type: .image, name: "clipboard-\(UUID().uuidString.prefix(8)).png", imageData: pngData))
         }
         if let text = pb.string(forType: .string) {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)

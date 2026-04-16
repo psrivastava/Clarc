@@ -527,7 +527,7 @@ struct ChatToolbarControls: View {
         Binding(
             get: { windowState.sessionEffort ?? "default" },
             set: { newValue in
-                appState.setSessionEffort(newValue == "default" ? nil : newValue, in: windowState)
+                windowState.sessionEffort = newValue == "default" ? nil : newValue
             }
         )
     }
@@ -722,7 +722,7 @@ struct EffortPickerSheet: View {
                     .background(index == selectedIndex ? ClaudeTheme.accentSubtle : ClaudeTheme.surfacePrimary)
                     .clipShape(RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusSmall))
                     .onTapGesture {
-                        appState.setSessionEffort(effort, in: windowState)
+                        windowState.sessionEffort = effort
                         dismiss()
                     }
                 }
@@ -746,7 +746,7 @@ struct EffortPickerSheet: View {
             return .handled
         }
         .onKeyPress(.return) {
-            appState.setSessionEffort(items[selectedIndex], in: windowState)
+            windowState.sessionEffort = items[selectedIndex]
             dismiss()
             return .handled
         }

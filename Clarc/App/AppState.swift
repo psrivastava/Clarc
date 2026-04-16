@@ -103,11 +103,6 @@ final class AppState {
         updateState(key) { $0.model = model }
     }
 
-    /// Sets the effort level for the current session. Passed as --effort to the CLI on next send.
-    func setSessionEffort(_ effort: String?, in window: WindowState) {
-        window.sessionEffort = effort
-    }
-
     func modelDisplayName(for model: String, in window: WindowState) -> String {
         if let active = activeModelName(in: window), active.lowercased().contains(model) {
             return Self.formatModelId(active)
@@ -447,8 +442,7 @@ final class AppState {
         case "effort":
             if parts.count > 1 {
                 let arg = String(parts[1]).trimmingCharacters(in: .whitespaces).lowercased()
-                let matched = Self.availableEfforts.first { $0 == arg }
-                setSessionEffort(matched ?? arg, in: window)
+                window.sessionEffort = Self.availableEfforts.contains(arg) ? arg : nil
             } else {
                 window.showEffortPicker = true
             }

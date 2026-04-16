@@ -137,6 +137,7 @@ struct InteractiveTerminalPopup: View {
     @State private var processExited = false
     @State private var exitCode: Int32 = 0
     @State private var process = TerminalProcess()
+    @State private var eventMonitor: Any?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -197,7 +198,21 @@ struct InteractiveTerminalPopup: View {
         }
         .frame(minWidth: 800, idealWidth: 900, minHeight: 760, idealHeight: 860)
         .background(ClaudeTheme.surfaceElevated)
+        .onAppear {
+            eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                // keyCode 53 = Escape
+                if event.keyCode == 53 {
+                    dismiss()
+                    return nil
+                }
+                return event
+            }
+        }
         .onDisappear {
+            if let monitor = eventMonitor {
+                NSEvent.removeMonitor(monitor)
+                eventMonitor = nil
+            }
             dismiss()
         }
     }

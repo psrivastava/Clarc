@@ -82,6 +82,7 @@ final class AppState {
     // MARK: - Model
 
     static let availableModels = ["opus", "sonnet", "haiku"]
+    static let availableEfforts = ["low", "medium", "high", "max"]
     var selectedModel: String = UserDefaults.standard.string(forKey: "selectedModel") ?? "opus" {
         didSet { UserDefaults.standard.set(selectedModel, forKey: "selectedModel") }
     }
@@ -100,6 +101,11 @@ final class AppState {
         window.sessionModel = model
         let key = window.currentSessionId ?? window.newSessionKey
         updateState(key) { $0.model = model }
+    }
+
+    /// Sets the effort level for the current session. Passed as --effort to the CLI on next send.
+    func setSessionEffort(_ effort: String?, in window: WindowState) {
+        window.sessionEffort = effort
     }
 
     func modelDisplayName(for model: String, in window: WindowState) -> String {
@@ -438,6 +444,15 @@ final class AppState {
                 window.showModelPicker = true
             }
             return true
+        case "effort":
+            if parts.count > 1 {
+                let arg = String(parts[1]).trimmingCharacters(in: .whitespaces).lowercased()
+                let matched = Self.availableEfforts.first { $0 == arg }
+                setSessionEffort(matched ?? arg, in: window)
+            } else {
+                window.showEffortPicker = true
+            }
+            return true
         default:
             return false
         }
@@ -618,6 +633,7 @@ final class AppState {
                 cliSessionId: cliSessionId,
                 internalSessionKey: sessionKey,
                 model: window.sessionModel ?? self.selectedModel,
+                effort: window.sessionEffort,
                 hookSettingsPath: hookSettingsPath,
                 dangerouslySkipPermissions: skipPermissions,
                 projectId: project.id,
@@ -688,6 +704,7 @@ final class AppState {
         cliSessionId: String?,
         internalSessionKey: String,
         model: String?,
+        effort: String? = nil,
         hookSettingsPath: String?,
         dangerouslySkipPermissions: Bool = false,
         projectId: UUID,
@@ -704,6 +721,7 @@ final class AppState {
             cwd: cwd,
             sessionId: cliSessionId,
             model: model,
+            effort: effort,
             hookSettingsPath: hookSettingsPath,
             dangerouslySkipPermissions: dangerouslySkipPermissions
         )

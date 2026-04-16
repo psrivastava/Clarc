@@ -86,9 +86,13 @@ public final class WindowState {
     public var diffFile: PreviewFile?
     public var showMarketplace = false
     public var showModelPicker = false
+    public var showEffortPicker = false
     /// Per-session model override. When set, this model is used instead of the global default.
     /// Cleared when a new chat is started or a different session is selected.
     public var sessionModel: String?
+    /// Per-session effort override. When set, passed as --effort to the CLI.
+    /// Cleared when a new chat is started or a different session is selected.
+    public var sessionEffort: String?
     public var requestInputFocus = false
     public var registryVersion = 0
     public var isInitialized = false

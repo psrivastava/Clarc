@@ -161,6 +161,7 @@ actor ClaudeService {
         cwd: String,
         sessionId: String? = nil,
         model: String? = nil,
+        effort: String? = nil,
         hookSettingsPath: String? = nil,
         dangerouslySkipPermissions: Bool = false
     ) -> AsyncStream<StreamEvent> {
@@ -188,6 +189,7 @@ actor ClaudeService {
                         cwd: cwd,
                         sessionId: sessionId,
                         model: model,
+                        effort: effort,
                         hookSettingsPath: hookSettingsPath,
                         dangerouslySkipPermissions: dangerouslySkipPermissions,
                         stdinPipe: stdin,
@@ -292,6 +294,7 @@ actor ClaudeService {
         prompt: String,
         sessionId: String?,
         model: String?,
+        effort: String?,
         hookSettingsPath: String?,
         dangerouslySkipPermissions: Bool
     ) -> [String] {
@@ -330,6 +333,10 @@ actor ClaudeService {
             args += ["--model", model]
         }
 
+        if let effort {
+            args += ["--effort", effort]
+        }
+
         args.append(prompt)
         return args
     }
@@ -341,6 +348,7 @@ actor ClaudeService {
         cwd: String,
         sessionId: String?,
         model: String?,
+        effort: String? = nil,
         hookSettingsPath: String?,
         dangerouslySkipPermissions: Bool = false,
         stdinPipe: Pipe,
@@ -358,6 +366,7 @@ actor ClaudeService {
             prompt: prompt,
             sessionId: sessionId,
             model: model,
+            effort: effort,
             hookSettingsPath: hookSettingsPath,
             dangerouslySkipPermissions: dangerouslySkipPermissions
         )

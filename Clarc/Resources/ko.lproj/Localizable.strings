@@ -36,6 +36,7 @@
 "Skip Permissions: ON" = "권한 건너뛰기: 켜짐";
 "Skip Permissions: OFF" = "권한 건너뛰기: 꺼짐";
 "Select Model" = "모델 선택";
+"Select Effort Level" = "Effort 수준 선택";
 "↑↓ Select  ↵ Confirm  esc Cancel" = "↑↓ 선택  ↵ 확인  esc 취소";
 
 // MARK: - SkillMarketView

@@ -523,6 +523,15 @@ struct ChatToolbarControls: View {
         )
     }
 
+    private var effortBinding: Binding<String> {
+        Binding(
+            get: { windowState.sessionEffort ?? "default" },
+            set: { newValue in
+                appState.setSessionEffort(newValue == "default" ? nil : newValue, in: windowState)
+            }
+        )
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             Button {
@@ -536,13 +545,28 @@ struct ChatToolbarControls: View {
             .help(appState.dangerouslySkipPermissions ? "Skip Permissions: ON" : "Skip Permissions: OFF")
 
             Picker("", selection: modelBinding) {
-                ForEach(AppState.availableModels, id: \.self) { model in
-                    Text(model.capitalized).tag(model)
+                Section("Model") {
+                    ForEach(AppState.availableModels, id: \.self) { model in
+                        Text(model.capitalized).tag(model)
+                    }
                 }
             }
             .labelsHidden()
             .pickerStyle(.menu)
             .fixedSize()
+
+            Picker("", selection: effortBinding) {
+                Section("Effort") {
+                    Text("Default").tag("default")
+                    ForEach(AppState.availableEfforts, id: \.self) { effort in
+                        Text(effort.capitalized).tag(effort)
+                    }
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+            .help("Set thinking effort level (--effort)")
         }
     }
 }
@@ -567,6 +591,11 @@ struct ChatDetailModifiers: ViewModifier {
             }
             .sheet(isPresented: Bindable(windowState).showModelPicker) {
                 ModelPickerSheet()
+                    .environment(appState)
+                    .environment(windowState)
+            }
+            .sheet(isPresented: Bindable(windowState).showEffortPicker) {
+                EffortPickerSheet()
                     .environment(appState)
                     .environment(windowState)
             }
@@ -644,6 +673,89 @@ struct ModelPickerSheet: View {
         }
         .onAppear {
             selectedIndex = AppState.availableModels.firstIndex(of: effectiveModel) ?? 0
+            DispatchQueue.main.async { isFocused = true }
+        }
+    }
+}
+
+// MARK: - Effort Picker Sheet
+
+struct EffortPickerSheet: View {
+    @Environment(AppState.self) private var appState
+    @Environment(WindowState.self) private var windowState
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedIndex: Int = 0
+    @FocusState private var isFocused: Bool
+
+    // 0 = Default (nil), 1...n = availableEfforts
+    private let items: [String?] = [nil] + AppState.availableEfforts.map { Optional($0) }
+
+    private var effectiveEffort: String? { windowState.sessionEffort }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Select Effort Level")
+                .font(.headline)
+                .foregroundStyle(ClaudeTheme.textPrimary)
+
+            VStack(spacing: 8) {
+                ForEach(items.indices, id: \.self) { index in
+                    let effort = items[index]
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(effort?.capitalized ?? "Default")
+                                .foregroundStyle(ClaudeTheme.textPrimary)
+                            if effort == "max" {
+                                Text("Opus 4.6 only")
+                                    .font(.caption2)
+                                    .foregroundStyle(ClaudeTheme.textTertiary)
+                            }
+                        }
+                        Spacer()
+                        if effectiveEffort == effort {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(ClaudeTheme.accent)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(index == selectedIndex ? ClaudeTheme.accentSubtle : ClaudeTheme.surfacePrimary)
+                    .clipShape(RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusSmall))
+                    .onTapGesture {
+                        appState.setSessionEffort(effort, in: windowState)
+                        dismiss()
+                    }
+                }
+            }
+
+            Text("↑↓ Select  ↵ Confirm  esc Cancel")
+                .font(.caption)
+                .foregroundStyle(ClaudeTheme.textTertiary)
+        }
+        .padding(20)
+        .frame(width: 300)
+        .background(ClaudeTheme.background)
+        .focusable()
+        .focused($isFocused)
+        .onKeyPress(.upArrow) {
+            selectedIndex = (selectedIndex - 1 + items.count) % items.count
+            return .handled
+        }
+        .onKeyPress(.downArrow) {
+            selectedIndex = (selectedIndex + 1) % items.count
+            return .handled
+        }
+        .onKeyPress(.return) {
+            appState.setSessionEffort(items[selectedIndex], in: windowState)
+            dismiss()
+            return .handled
+        }
+        .onKeyPress(.escape) {
+            dismiss()
+            return .handled
+        }
+        .onAppear {
+            selectedIndex = items.firstIndex(where: { $0 == effectiveEffort }) ?? 0
             DispatchQueue.main.async { isFocused = true }
         }
     }

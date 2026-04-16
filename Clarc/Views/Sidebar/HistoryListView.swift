@@ -227,12 +227,9 @@ struct HistoryListView: View {
     }
 
     private static func sessionOrder(
-        _ a: ChatSession.Summary, _ b: ChatSession.Summary,
-        streamingIds: Set<String>
+        _ a: ChatSession.Summary, _ b: ChatSession.Summary
     ) -> Bool {
         if a.isPinned != b.isPinned { return a.isPinned }
-        let aS = streamingIds.contains(a.id), bS = streamingIds.contains(b.id)
-        if aS != bS { return aS }
         return a.updatedAt > b.updatedAt
     }
 
@@ -241,7 +238,7 @@ struct HistoryListView: View {
         let streamingIds = appState.backgroundStreamingSessionIds(in: windowState)
         return appState.allSessionSummaries
             .filter { $0.projectId == projectId }
-            .sorted { Self.sessionOrder($0, $1, streamingIds: streamingIds) }
+            .sorted { Self.sessionOrder($0, $1) }
             .map { summary in
                 DisplaySession(
                     id: summary.id,
@@ -262,7 +259,7 @@ struct HistoryListView: View {
         let streamingIds = appState.backgroundStreamingSessionIds(in: windowState)
         var seen = Set<String>()
         return appState.allSessionSummaries
-            .sorted { Self.sessionOrder($0, $1, streamingIds: streamingIds) }
+            .sorted { Self.sessionOrder($0, $1) }
             .filter { seen.insert($0.id).inserted }
             .map { summary in
                 DisplaySession(

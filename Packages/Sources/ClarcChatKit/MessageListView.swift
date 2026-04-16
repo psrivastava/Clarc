@@ -89,9 +89,10 @@ struct MessageListView: View {
                 }
             }
             .padding(.horizontal, 20)
-            // Suppress layout animations when switching sessions so the pulse indicator
-            // doesn't visually jump as StreamingMessageView changes height.
+            // Suppress layout animations when switching sessions or streaming state changes,
+            // so the pulse indicator doesn't visually jump as content height shifts.
             .animation(.none, value: windowState.currentSessionId)
+            .animation(.none, value: chatBridge.isStreaming)
 
             Color.clear.frame(height: 1)
                 .padding(.bottom, 16)

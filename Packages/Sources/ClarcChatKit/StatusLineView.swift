@@ -10,6 +10,13 @@ struct StatusLineView: View {
         chatBridge.modelDisplayName
     }
 
+    private var totalResponseDuration: Double {
+        chatBridge.messages
+            .filter { $0.role == .assistant }
+            .compactMap { $0.duration }
+            .reduce(0, +)
+    }
+
     private var contextPercentage: Double? {
         guard let pct = chatBridge.lastTurnContextUsedPercentage else { return nil }
         return min(pct, 100)
@@ -45,9 +52,17 @@ struct StatusLineView: View {
             .foregroundStyle(ClaudeTheme.textTertiary)
 
             Spacer()
+
+            HStack(spacing: 4) {
+                Image(systemName: "stopwatch")
+                    .font(.system(size: 10))
+                Text(formatTotalDuration(totalResponseDuration))
+            }
+            .foregroundStyle(ClaudeTheme.textTertiary)
         }
         .font(.system(size: 11, weight: .medium, design: .monospaced))
-        .padding(.horizontal, 12)
+        .padding(.leading, 12)
+        .padding(.trailing, 20)
         .frame(height: 28)
         .padding(.bottom, 4)
         .background(ClaudeTheme.surfacePrimary)
@@ -146,6 +161,15 @@ struct StatusLineView: View {
         let remaining = date.timeIntervalSinceNow
         guard remaining > 0 else { return "" }
         return makeCountdownFormatter().string(from: remaining) ?? ""
+    }
+
+    private func formatTotalDuration(_ seconds: Double) -> String {
+        guard seconds > 0 else { return "—" }
+        let f = DateComponentsFormatter()
+        f.unitsStyle = .abbreviated
+        f.maximumUnitCount = 2
+        f.allowedUnits = [.hour, .minute, .second]
+        return f.string(from: seconds) ?? "—"
     }
 
     private func abbreviatePath(_ path: String) -> String {

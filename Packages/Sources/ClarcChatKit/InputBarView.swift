@@ -112,6 +112,8 @@ struct InputBarView: View {
             isInputFocused = true
             lastPasteChangeCount = NSPasteboard.general.changeCount
         }
+        .contentShape(Rectangle())
+        .onTapGesture { isInputFocused = true }
     }
 
     // MARK: - Input Row

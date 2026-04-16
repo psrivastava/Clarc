@@ -12,6 +12,8 @@ struct MessageBubble: View {
     @State private var editText = ""
     @FocusState private var isEditFocused: Bool
     @State private var isLongTextExpanded = false
+    @State private var isHoveringUserBubble = false
+    @State private var hoveredBlockId: String? = nil
 
     /// Threshold (character count) for collapsing long text
     private static let longTextThreshold = 500
@@ -68,7 +70,7 @@ struct MessageBubble: View {
 
                     ForEach(visibleBlocks) { block in
                         if let text = block.text, !text.isEmpty {
-                            assistantTextBubble(text: text, hasHiddenTools: !hidden.isEmpty)
+                            assistantTextBubble(text: text, blockId: block.id, hasHiddenTools: !hidden.isEmpty)
                         }
                         if let toolCall = block.toolCall {
                             ToolResultView(toolCall: toolCall, isMessageStreaming: message.isStreaming)
@@ -207,6 +209,14 @@ struct MessageBubble: View {
                 }
             }
             .bubbleStyle(.user)
+            .overlay(alignment: .bottomTrailing) {
+                if isHoveringUserBubble {
+                    copyButton(for: message.content)
+                        .padding(6)
+                        .transition(.opacity.animation(.easeInOut(duration: 0.15)))
+                }
+            }
+            .onHover { isHoveringUserBubble = $0 }
             .contextMenu {
                 Button {
                     copyToClipboard(message.content, feedback: $isCopied)
@@ -228,7 +238,7 @@ struct MessageBubble: View {
 
     // MARK: - Assistant Text Bubble
 
-    private func assistantTextBubble(text: String, hasHiddenTools: Bool = false) -> some View {
+    private func assistantTextBubble(text: String, blockId: String, hasHiddenTools: Bool = false) -> some View {
         let isLastBlock = message.blocks.last?.isText == true
             && message.blocks.last?.text == text
 
@@ -253,6 +263,14 @@ struct MessageBubble: View {
         }
         .foregroundStyle(ClaudeTheme.textPrimary)
         .bubbleStyle(.assistant)
+        .overlay(alignment: .bottomTrailing) {
+            if hoveredBlockId == blockId && !message.isStreaming {
+                copyButton(for: text)
+                    .padding(6)
+                    .transition(.opacity.animation(.easeInOut(duration: 0.15)))
+            }
+        }
+        .onHover { hoveredBlockId = $0 ? blockId : nil }
         .onTapGesture {
             if hasHiddenTools {
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -268,6 +286,26 @@ struct MessageBubble: View {
             }
         }
         .accessibilityLabel("Assistant: \(text)")
+    }
+
+    // MARK: - Copy Button
+
+    @ViewBuilder
+    private func copyButton(for text: String) -> some View {
+        Button {
+            copyToClipboard(text, feedback: $isCopied)
+        } label: {
+            Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(ClaudeTheme.textSecondary)
+                .frame(width: 26, height: 26)
+                .background(ClaudeTheme.surfaceSecondary, in: RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(ClaudeTheme.border, lineWidth: 0.5)
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Transient Tool Helpers

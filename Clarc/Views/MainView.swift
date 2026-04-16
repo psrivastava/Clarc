@@ -8,8 +8,6 @@ struct MainView: View {
     @Environment(WindowState.self) private var windowState
     @State private var showGitHubSheet = false
     @State private var showFilePicker = false
-    @State private var showCommandManager = false
-    @State private var showShortcutManager = false
     @Environment(\.openSettings) private var openSettings
     @State private var sidebarTab: SidebarTab = .history
     @State private var fileSearchTrigger = false
@@ -151,14 +149,6 @@ struct MainView: View {
         .sheet(isPresented: $showGitHubSheet) {
             GitHubSheet()
         }
-        .sheet(isPresented: $showCommandManager) {
-            SlashCommandManagerView(projectName: windowState.selectedProject?.name ?? "")
-                .onDisappear { windowState.registryVersion += 1 }
-        }
-        .sheet(isPresented: $showShortcutManager) {
-            ShortcutManagerView(projectName: windowState.selectedProject?.name ?? "")
-                .onDisappear { windowState.registryVersion += 1 }
-        }
     }
 
     // MARK: - Chat Toolbar Area (moved from old ChatView)
@@ -269,7 +259,7 @@ struct MainView: View {
         }
         // Toolbar is in an isolated struct so NSToolbar does not re-layout on project switches.
         .background {
-            DetailToolbar(showCommandManager: $showCommandManager, showShortcutManager: $showShortcutManager)
+            DetailToolbar()
         }
     }
 
@@ -337,37 +327,18 @@ struct MainView: View {
 struct DetailToolbar: View {
     @Environment(AppState.self) private var appState
     @Environment(WindowState.self) private var windowState
-    @Binding var showCommandManager: Bool
-    @Binding var showShortcutManager: Bool
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         Color.clear
             .toolbar {
                 ToolbarItemGroup(placement: .confirmationAction) {
-                    ControlGroup {
-                        Button {
-                            appState.startNewChat(in: windowState)
-                        } label: {
-                            Image(systemName: "square.and.pencil")
-                        }
-                        .help("New Chat")
-
-                        Button {
-                            showCommandManager = true
-                        } label: {
-                            Text("/")
-                                .font(.system(size: 15, weight: .semibold, design: .monospaced))
-                        }
-                        .help("Manage Slash Commands")
-
-                        Button {
-                            showShortcutManager = true
-                        } label: {
-                            Image(systemName: "bolt.fill")
-                        }
-                        .help("Manage Shortcuts")
+                    Button {
+                        appState.startNewChat(in: windowState)
+                    } label: {
+                        Image(systemName: "square.and.pencil")
                     }
+                    .help("New Chat")
 
                     Button {
                         windowState.showInspector.toggle()

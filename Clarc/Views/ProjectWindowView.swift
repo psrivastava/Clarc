@@ -8,8 +8,6 @@ struct ProjectWindowView: View {
     @Environment(WindowState.self) private var windowState
     @State private var sidebarTab: MainView.SidebarTab = .history
     @State private var fileSearchTrigger = false
-    @State private var showCommandManager = false
-    @State private var showShortcutManager = false
     @State private var inspectorStarted = false
     @State private var inspectorProcess = TerminalProcess()
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -146,31 +144,12 @@ struct ProjectWindowView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
-                ControlGroup {
-                    Button {
-                        appState.startNewChat(in: windowState)
-                    } label: {
-                        Image(systemName: "square.and.pencil")
-                    }
-                    .help("New Chat")
-                }
-            }
-
-            ToolbarItemGroup {
                 Button {
-                    showShortcutManager = true
+                    appState.startNewChat(in: windowState)
                 } label: {
-                    Label("Manage Shortcuts", systemImage: "bolt.fill")
+                    Image(systemName: "square.and.pencil")
                 }
-                .help("Manage Shortcuts")
-
-                Button {
-                    showCommandManager = true
-                } label: {
-                    Text("/")
-                        .font(.system(size: 15, weight: .semibold, design: .monospaced))
-                }
-                .help("Manage Slash Commands")
+                .help("New Chat")
 
                 Button {
                     windowState.showInspector.toggle()
@@ -183,14 +162,6 @@ struct ProjectWindowView: View {
         }
         .focusedValue(\.startNewChat) {
             appState.startNewChat(in: windowState)
-        }
-        .sheet(isPresented: $showCommandManager) {
-            SlashCommandManagerView(projectName: windowState.selectedProject?.name ?? "")
-                .onDisappear { windowState.registryVersion += 1 }
-        }
-        .sheet(isPresented: $showShortcutManager) {
-            ShortcutManagerView(projectName: windowState.selectedProject?.name ?? "")
-                .onDisappear { windowState.registryVersion += 1 }
         }
     }
 

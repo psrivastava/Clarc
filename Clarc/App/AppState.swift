@@ -356,7 +356,7 @@ final class AppState {
                 bridge.isThinking = state.isThinking
                 bridge.streamingStartDate = state.streamingStartDate
                 bridge.lastTurnContextUsedPercentage = state.lastTurnContextUsedPercentage
-                bridge.modelDisplayName = modelDisplayName(for: selectedModel, in: window)
+                bridge.modelDisplayName = modelDisplayName(for: window.sessionModel ?? selectedModel, in: window)
                 bridge.sessionStats = ChatSessionStats(
                     costUsd: state.costUsd,
                     inputTokens: state.inputTokens,

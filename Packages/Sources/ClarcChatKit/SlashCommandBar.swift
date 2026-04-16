@@ -799,14 +799,47 @@ struct AtFileEntry: Identifiable {
 // MARK: - AtFileSearch
 
 enum AtFileSearch {
-    private static let ignoredNames: Set<String> = [
+    private nonisolated static let ignoredNames: Set<String> = [
         ".git", ".build", ".swiftpm", "DerivedData",
         "node_modules", ".DS_Store", "Pods",
         "xcuserdata", ".xcodeproj", ".xcworkspace",
     ]
 
+    // File list cache keyed by project path. Populated once per project on first use
+    // or proactively via prefetch(projectPath:). Filtering against the cached list is
+    // cheap (in-memory), so typing after the first @ character is fast.
+    private static var fileListCache: [String: [AtFileEntry]] = [:]
+    private static var prefetchingPaths: Set<String> = []
+
+    /// Pre-warms the file cache for a project in the background.
+    /// Call when a project is selected so the cache is ready when the user types @.
+    static func prefetch(projectPath: String) {
+        guard fileListCache[projectPath] == nil, !prefetchingPaths.contains(projectPath) else { return }
+        prefetchingPaths.insert(projectPath)
+        Task {
+            let files = await Task.detached(priority: .utility) {
+                AtFileSearch.collectFiles(at: projectPath, basePath: projectPath, maxDepth: 6)
+            }.value
+            fileListCache[projectPath] = files
+            prefetchingPaths.remove(projectPath)
+        }
+    }
+
+    /// Invalidates the cached file list for a project (e.g. after file-tree changes).
+    static func invalidate(for projectPath: String) {
+        fileListCache.removeValue(forKey: projectPath)
+    }
+
     static func search(query: String, projectPath: String, maxResults: Int = 20) -> [AtFileEntry] {
-        let allFiles = collectFiles(at: projectPath, basePath: projectPath, maxDepth: 6)
+        // Use the cached file list; fall back to a synchronous scan only if the
+        // prefetch hasn't finished yet (should be rare after the first project open).
+        let allFiles: [AtFileEntry]
+        if let cached = fileListCache[projectPath] {
+            allFiles = cached
+        } else {
+            allFiles = collectFiles(at: projectPath, basePath: projectPath, maxDepth: 6)
+            fileListCache[projectPath] = allFiles
+        }
 
         let q = query.lowercased()
         guard !q.isEmpty else {
@@ -829,7 +862,7 @@ enum AtFileSearch {
         return Array(combined.prefix(maxResults))
     }
 
-    private static func collectFiles(
+    private nonisolated static func collectFiles(
         at path: String,
         basePath: String,
         maxDepth: Int,

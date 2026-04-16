@@ -102,6 +102,10 @@ struct InputBarView: View {
                     processNextQueued()
                 }
             }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(300))
+                isInputFocused = true
+            }
         }
         .onChange(of: chatBridge.isStreaming) { _, isStreaming in
             if !isStreaming {
@@ -109,8 +113,11 @@ struct InputBarView: View {
             }
         }
         .onAppear {
-            isInputFocused = true
             lastPasteChangeCount = NSPasteboard.general.changeCount
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(300))
+                isInputFocused = true
+            }
             if let path = windowState.selectedProject?.path {
                 AtFileSearch.prefetch(projectPath: path)
             }

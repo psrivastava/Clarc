@@ -39,7 +39,7 @@ struct UserManualView: View {
                 .tag(topic)
         }
         .listStyle(.sidebar)
-        .navigationTitle("사용자 가이드")
+        .navigationTitle("User Guide")
     }
 
     // MARK: - Topic Detail
@@ -182,18 +182,18 @@ enum ManualTopic: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .overview:        "Clarc 소개"
-        case .projects:        "프로젝트 관리"
-        case .chat:            "채팅 기본"
-        case .shortcuts:       "키보드 단축키"
-        case .slashCommands:   "슬래시 명령어"
-        case .attachments:     "파일 및 이미지 첨부"
-        case .customShortcuts: "단축 버튼"
-        case .inspectorPanel:  "인스펙터 패널"
-        case .github:          "GitHub 연동"
-        case .marketplace:     "스킬 마켓플레이스"
-        case .permissions:     "권한 요청"
-        case .statusLine:      "상태 표시줄"
+        case .overview:        "About Clarc"
+        case .projects:        "Project Management"
+        case .chat:            "Chat Basics"
+        case .shortcuts:       "Keyboard Shortcuts"
+        case .slashCommands:   "Slash Commands"
+        case .attachments:     "File & Image Attachments"
+        case .customShortcuts: "Shortcut Buttons"
+        case .inspectorPanel:  "Inspector Panel"
+        case .github:          "GitHub Integration"
+        case .marketplace:     "Skill Marketplace"
+        case .permissions:     "Permission Requests"
+        case .statusLine:      "Status Line"
         }
     }
 
@@ -219,157 +219,157 @@ enum ManualTopic: String, CaseIterable, Identifiable {
         case .overview:
             [
                 ManualSection(
-                    title: "Clarc이란?",
-                    body: "Claude Code CLI의 네이티브 macOS 데스크톱 클라이언트입니다. 터미널 없이 GUI로 Claude Code의 모든 기능을 사용할 수 있습니다."
+                    title: "What is Clarc?",
+                    body: "A native macOS desktop client for the Claude Code CLI. Use all Claude Code features via a polished GUI without needing a terminal."
                 ),
                 ManualSection(
-                    title: "기본 레이아웃",
-                    body: "왼쪽 사이드바에는 히스토리와 파일 탭이 있습니다. 프로젝트 탭은 채팅 영역 상단에 표시됩니다. 오른쪽 인스펙터 패널에는 터미널과 메모 탭이 있습니다.",
-                    note: "프로젝트를 선택하지 않으면 채팅이 비활성화됩니다."
+                    title: "Main Layout",
+                    body: "The left sidebar has History and Files tabs. Project tabs appear at the top of the chat area — click to switch projects. The right inspector panel contains the Terminal and Memo tabs.",
+                    note: "Chat is disabled when no project is selected."
                 ),
                 ManualSection(
-                    title: "상단 툴바",
-                    body: "툴바에는 새 채팅, 슬래시 명령어 관리, 단축 버튼 관리, 권한 모드 선택기, 모델 선택기, 인스펙터 패널 토글, 설정, GitHub 연동 버튼이 있습니다."
+                    title: "Top Toolbar",
+                    body: "The toolbar contains: New Chat, Manage Slash Commands, Manage Shortcut Buttons, Skip Permissions toggle, Model picker, Inspector panel toggle, Settings, and the GitHub integration button."
                 ),
             ]
 
         case .projects:
             [
                 ManualSection(
-                    title: "프로젝트 추가",
-                    body: "사이드바 상단의 + 버튼을 클릭하거나 Finder에서 폴더를 드래그하세요. Claude Code는 해당 폴더를 작업 디렉토리로 사용합니다."
+                    title: "Adding a Project",
+                    body: "Click the + button at the top of the sidebar or drag a folder from Finder. Claude Code uses that folder as its working directory."
                 ),
                 ManualSection(
-                    title: "프로젝트 탭",
-                    body: "프로젝트 탭은 채팅 영역 상단에 표시됩니다. 탭을 클릭하면 프로젝트를 전환할 수 있습니다. Claude가 스트리밍 중에도 전환할 수 있으며, 활성 스트림은 백그라운드에서 계속 실행됩니다."
+                    title: "Project Tabs",
+                    body: "Project tabs appear at the top of the chat area. Click a tab to switch projects. You can switch even while Claude is streaming — the active stream continues in the background."
                 ),
                 ManualSection(
-                    title: "독립 프로젝트 창",
-                    body: "프로젝트 탭을 더블클릭하면 별도의 독립 창으로 열립니다. 각 창은 세션을 독립적으로 관리하므로 여러 프로젝트를 동시에 작업할 수 있습니다.",
-                    note: "독립 프로젝트 창에서는 프로젝트 이름만 표시되며 프로젝트 탭이 없습니다."
+                    title: "Dedicated Project Window",
+                    body: "Double-click a project tab to open it in its own independent window. Each window manages its own sessions independently, allowing you to work on multiple projects at once.",
+                    note: "In a dedicated project window, only the project name is shown — there are no project tabs."
                 ),
                 ManualSection(
-                    title: "사이드바 탭",
-                    body: "히스토리 탭: 이전 대화 목록\n파일 탭: 프로젝트 파일 트리 탐색",
+                    title: "Sidebar Tabs",
+                    body: "History tab: shows previous conversations\nFiles tab: browse the project file tree",
                     items: [
-                        KeyValueItem(key: "⌘1", value: "히스토리 탭으로 이동"),
-                        KeyValueItem(key: "⌘2", value: "파일 탭으로 이동"),
-                        KeyValueItem(key: "⌘F", value: "파일 탭 + 검색 활성화"),
+                        KeyValueItem(key: "⌘1", value: "Go to History tab"),
+                        KeyValueItem(key: "⌘2", value: "Go to Files tab"),
+                        KeyValueItem(key: "⌘F", value: "Files tab + activate search"),
                     ]
                 ),
                 ManualSection(
-                    title: "히스토리 관리",
-                    body: "히스토리 탭에서 세션을 우클릭하면 컨텍스트 메뉴가 열립니다.",
+                    title: "History Management",
+                    body: "Right-click a session in the History tab for context menu options.",
                     items: [
-                        KeyValueItem(key: "pin", value: "고정 / 해제 — 고정된 세션은 목록 상단에 유지됩니다", symbolName: "pin.fill", symbolColor: .orange),
-                        KeyValueItem(key: "rename", value: "이름 변경 — 세션 제목을 수정합니다", symbolName: "pencil", symbolColor: .secondary),
-                        KeyValueItem(key: "delete", value: "삭제 — 세션을 제거합니다", symbolName: "trash", symbolColor: .red),
+                        KeyValueItem(key: "pin", value: "Pin / Unpin — pinned sessions stay at the top of the list", symbolName: "pin.fill", symbolColor: .orange),
+                        KeyValueItem(key: "rename", value: "Rename — change the session title", symbolName: "pencil", symbolColor: .secondary),
+                        KeyValueItem(key: "delete", value: "Delete — remove the session", symbolName: "trash", symbolColor: .red),
                     ],
-                    note: "히스토리 헤더의 휴지통 아이콘을 클릭하면 모든 세션을 한 번에 삭제할 수 있습니다."
+                    note: "Use the trash icon in the History header to delete all sessions at once."
                 ),
                 ManualSection(
-                    title: "파일 인스펙터",
-                    body: "파일 탭에서 파일을 클릭하면 구문 강조와 함께 미리보기가 표시됩니다. 연필 버튼을 누르면 편집 모드로 전환되어 파일을 직접 수정할 수 있습니다.",
+                    title: "File Inspector",
+                    body: "Click any file in the Files tab to preview it with syntax highlighting. Press the pencil button to enter edit mode and modify the file directly.",
                     items: [
-                        KeyValueItem(key: "⌘S", value: "파일 변경 사항 저장"),
-                        KeyValueItem(key: "Escape", value: "편집 모드 종료"),
+                        KeyValueItem(key: "⌘S", value: "Save file changes"),
+                        KeyValueItem(key: "Escape", value: "Exit edit mode"),
                     ],
-                    note: "1 MB를 초과하는 파일은 미리보기가 지원되지 않습니다."
+                    note: "Files larger than 1 MB cannot be previewed."
                 ),
                 ManualSection(
-                    title: "Git 상태",
-                    body: "변경된 파일 수가 사이드바 하단에 표시됩니다."
+                    title: "Git Status",
+                    body: "The number of changed files is shown at the bottom of the sidebar."
                 ),
             ]
 
         case .chat:
             [
                 ManualSection(
-                    title: "메시지 보내기",
-                    body: "입력 필드에 메시지를 입력하고 Return 키 또는 전송 버튼을 누르세요.",
+                    title: "Sending Messages",
+                    body: "Type a message in the input field and press Return or the send button.",
                     items: [
-                        KeyValueItem(key: "Return", value: "메시지 전송"),
-                        KeyValueItem(key: "⌘Return", value: "메시지 전송 (대체 단축키)"),
-                        KeyValueItem(key: "⇧Return", value: "줄 바꿈 삽입"),
-                        KeyValueItem(key: "Escape", value: "스트리밍 중단 (응답 생성 취소)"),
+                        KeyValueItem(key: "Return", value: "Send message"),
+                        KeyValueItem(key: "⌘Return", value: "Send message (alternative)"),
+                        KeyValueItem(key: "⇧Return", value: "Insert line break"),
+                        KeyValueItem(key: "Escape", value: "Stop streaming (cancel response generation)"),
                     ]
                 ),
                 ManualSection(
-                    title: "메시지 큐",
-                    body: "Claude가 응답 중에도 메시지를 보낼 수 있습니다. 새 메시지는 자동으로 큐에 추가되어 현재 응답이 완료되면 전송됩니다. 큐에 쌓인 메시지는 입력 필드 위에 뱃지로 표시됩니다. 각 항목의 × 버튼을 클릭하면 큐에서 제거됩니다."
+                    title: "Message Queue",
+                    body: "You can send messages even while Claude is responding. New messages are queued automatically and sent once the current response finishes. Queued messages appear as a badge above the input field — click the × on each item to remove it from the queue."
                 ),
                 ManualSection(
-                    title: "이전 메시지 불러오기",
-                    body: "입력 필드가 비어 있을 때 ↑/↓ 키로 메시지 히스토리를 탐색할 수 있습니다.",
+                    title: "Recalling Previous Messages",
+                    body: "When the input field is empty, use ↑/↓ to navigate your message history.",
                     items: [
-                        KeyValueItem(key: "↑", value: "이전 메시지 불러오기"),
-                        KeyValueItem(key: "↓", value: "다음 메시지 / 입력 초기화"),
+                        KeyValueItem(key: "↑", value: "Recall previous message"),
+                        KeyValueItem(key: "↓", value: "Next message / clear input"),
                     ]
                 ),
                 ManualSection(
-                    title: "모델 변경",
-                    body: "채팅 영역 상단의 모델 드롭다운에서 Claude 모델을 전환할 수 있습니다."
+                    title: "Changing the Model",
+                    body: "Use the model dropdown at the top of the chat area to switch Claude models."
                 ),
                 ManualSection(
-                    title: "권한 모드",
-                    body: "채팅 영역 상단의 권한 모드 드롭다운에서 Claude가 작업을 실행하기 전에 승인을 요청하는 방식을 제어할 수 있습니다.",
+                    title: "Permission Mode",
+                    body: "Use the permission mode dropdown at the top of the chat to control how Claude requests approval before running actions.",
                     items: [
-                        KeyValueItem(key: "권한 요청", value: "기본 모드 — 파일 편집과 명령어 실행 시 승인 요청"),
-                        KeyValueItem(key: "편집 수락", value: "작업 디렉토리 파일 편집을 자동 수락 (명령어는 여전히 승인 필요)"),
-                        KeyValueItem(key: "계획 모드", value: "파일 읽기만 허용, 실제 편집 없이 계획만 제시"),
-                        KeyValueItem(key: "자동 모드", value: "AI가 안전한 작업은 자동 승인, 위험한 작업만 승인 요청 (Max/Team/Enterprise/API 플랜 + Sonnet/Opus 4.6+ 필요)"),
-                        KeyValueItem(key: "권한 건너뛰기", value: "모든 권한 검사 생략 — 격리된 환경에서만 사용 권장"),
+                        KeyValueItem(key: "Ask", value: "Default — prompts for approval before file edits and commands"),
+                        KeyValueItem(key: "Accept", value: "Auto-accepts file edits in the working directory (commands still require approval)"),
+                        KeyValueItem(key: "Plan", value: "Read-only — analyzes and plans without making edits"),
+                        KeyValueItem(key: "Auto", value: "AI auto-approves safe operations, prompts only for risky ones (requires Max/Team/Enterprise/API plan + Sonnet/Opus 4.6+)"),
+                        KeyValueItem(key: "Bypass", value: "Skips all permission checks — use only in isolated environments"),
                     ],
-                    note: "권한 건너뛰기 모드는 완전히 신뢰하는 프로젝트에서만 사용하세요."
+                    note: "Only enable Skip Permissions on projects you fully trust."
                 ),
             ]
 
         case .shortcuts:
             [
                 ManualSection(
-                    title: "전역 단축키",
+                    title: "Global Shortcuts",
                     body: "",
                     items: [
-                        KeyValueItem(key: "⌘N", value: "새 채팅 시작"),
-                        KeyValueItem(key: "⌘W", value: "현재 창 닫기"),
-                        KeyValueItem(key: "⌘1", value: "사이드바 — 히스토리 탭 (숨겨진 경우 펼침)"),
-                        KeyValueItem(key: "⌘2", value: "사이드바 — 파일 탭 (숨겨진 경우 펼침)"),
-                        KeyValueItem(key: "⌘3", value: "왼쪽 사이드바 토글"),
-                        KeyValueItem(key: "⌘4", value: "오른쪽 인스펙터 패널 토글"),
-                        KeyValueItem(key: "⌘F", value: "사이드바 — 파일 탭 + 검색 활성화"),
-                        KeyValueItem(key: "더블클릭", value: "프로젝트 탭 — 독립 창으로 열기"),
+                        KeyValueItem(key: "⌘N", value: "Start new chat"),
+                        KeyValueItem(key: "⌘W", value: "Close current window"),
+                        KeyValueItem(key: "⌘1", value: "Sidebar — History tab (expands sidebar if hidden)"),
+                        KeyValueItem(key: "⌘2", value: "Sidebar — Files tab (expands sidebar if hidden)"),
+                        KeyValueItem(key: "⌘3", value: "Toggle left sidebar"),
+                        KeyValueItem(key: "⌘4", value: "Toggle right inspector panel"),
+                        KeyValueItem(key: "⌘F", value: "Sidebar — Files tab + search"),
+                        KeyValueItem(key: "Double-click", value: "Project tab — open in dedicated window"),
                     ]
                 ),
                 ManualSection(
-                    title: "입력 필드 단축키",
+                    title: "Input Field Shortcuts",
                     body: "",
                     items: [
-                        KeyValueItem(key: "Return", value: "메시지 전송"),
-                        KeyValueItem(key: "⌘Return", value: "메시지 전송 (대체 단축키)"),
-                        KeyValueItem(key: "⇧Return", value: "줄 바꿈"),
-                        KeyValueItem(key: "Escape", value: "팝업 닫기 / 스트리밍 중단"),
-                        KeyValueItem(key: "↑ / ↓", value: "팝업 항목 선택 또는 메시지 히스토리 탐색"),
-                        KeyValueItem(key: "Tab", value: "슬래시 명령어 / @ 파일 자동완성"),
+                        KeyValueItem(key: "Return", value: "Send message"),
+                        KeyValueItem(key: "⌘Return", value: "Send message (alternative)"),
+                        KeyValueItem(key: "⇧Return", value: "Line break"),
+                        KeyValueItem(key: "Escape", value: "Close popup / stop streaming"),
+                        KeyValueItem(key: "↑ / ↓", value: "Select popup item or navigate message history"),
+                        KeyValueItem(key: "Tab", value: "Autocomplete slash command / @ file"),
                     ]
                 ),
                 ManualSection(
-                    title: "슬래시 명령어 팝업",
+                    title: "Slash Command Popup",
                     body: "",
                     items: [
-                        KeyValueItem(key: "↑ / ↓", value: "항목 선택"),
-                        KeyValueItem(key: "Return", value: "명령어 실행"),
-                        KeyValueItem(key: "⌘Return", value: "명령어 상세 보기"),
-                        KeyValueItem(key: "Tab", value: "명령어 자동완성"),
-                        KeyValueItem(key: "Escape", value: "팝업 닫기"),
+                        KeyValueItem(key: "↑ / ↓", value: "Select item"),
+                        KeyValueItem(key: "Return", value: "Execute command"),
+                        KeyValueItem(key: "⌘Return", value: "View command details"),
+                        KeyValueItem(key: "Tab", value: "Autocomplete command"),
+                        KeyValueItem(key: "Escape", value: "Close popup"),
                     ]
                 ),
                 ManualSection(
-                    title: "@ 파일 팝업",
+                    title: "@ File Popup",
                     body: "",
                     items: [
-                        KeyValueItem(key: "↑ / ↓", value: "항목 선택"),
-                        KeyValueItem(key: "Return / Tab", value: "파일 경로 삽입"),
-                        KeyValueItem(key: "Escape", value: "팝업 닫기"),
+                        KeyValueItem(key: "↑ / ↓", value: "Select item"),
+                        KeyValueItem(key: "Return / Tab", value: "Insert file path"),
+                        KeyValueItem(key: "Escape", value: "Close popup"),
                     ]
                 ),
             ]
@@ -377,54 +377,54 @@ enum ManualTopic: String, CaseIterable, Identifiable {
         case .slashCommands:
             [
                 ManualSection(
-                    title: "슬래시 명령어란?",
-                    body: "입력 필드에 /를 입력하면 사용 가능한 명령어 팝업이 열립니다. 슬래시 명령어를 사용하면 Claude Code CLI 작업을 직접 타이핑하지 않고 빠르게 실행할 수 있습니다."
+                    title: "What are Slash Commands?",
+                    body: "Type / in the input field to open a popup list of available commands. Slash commands let you quickly trigger Claude Code CLI operations without typing them manually."
                 ),
                 ManualSection(
-                    title: "사용 방법",
-                    body: "/를 입력해 팝업을 열고, 계속 입력하면 결과가 필터링됩니다. ↑/↓로 탐색하세요.",
+                    title: "How to Use",
+                    body: "Type / to open the popup, then continue typing to filter results. Use ↑/↓ to navigate.",
                     items: [
-                        KeyValueItem(key: "Return", value: "선택한 명령어 실행"),
-                        KeyValueItem(key: "⌘Return", value: "명령어 상세 보기"),
-                        KeyValueItem(key: "Tab", value: "명령어 자동완성"),
-                        KeyValueItem(key: "Escape", value: "팝업 닫기"),
+                        KeyValueItem(key: "Return", value: "Execute selected command"),
+                        KeyValueItem(key: "⌘Return", value: "View command details"),
+                        KeyValueItem(key: "Tab", value: "Autocomplete command"),
+                        KeyValueItem(key: "Escape", value: "Close popup"),
                     ]
                 ),
                 ManualSection(
-                    title: "인터랙티브 명령어",
-                    body: "/config, /permissions, /model 등 일부 명령어는 전체 인터랙티브 터미널 팝업 시트에서 실행됩니다. 명령어가 완료되면 팝업이 자동으로 닫힙니다."
+                    title: "Interactive Commands",
+                    body: "Some commands (such as /config, /permissions, /model) open in a full interactive terminal popup sheet, where you can use the interactive CLI interface. The popup closes automatically when the command finishes."
                 ),
                 ManualSection(
-                    title: "명령어 관리",
-                    body: "툴바의 / 버튼을 클릭하거나 설정 → 슬래시 명령어에서 명령어를 추가, 편집, 숨기거나 비활성화할 수 있습니다. 커스텀 명령어와 기본 명령어 변경사항은 프로젝트별로 저장됩니다.",
-                    note: "JSON 가져오기/내보내기로 명령어 설정을 백업하거나 공유할 수 있습니다."
+                    title: "Managing Commands",
+                    body: "Click the / button in the toolbar, or open Settings → Slash Commands to add, edit, hide, or disable commands. Custom commands and changes to built-in commands are saved per project.",
+                    note: "JSON import/export is supported for backing up or sharing your command set."
                 ),
             ]
 
         case .attachments:
             [
                 ManualSection(
-                    title: "파일 첨부",
-                    body: "입력 필드 왼쪽의 클립 아이콘을 클릭하거나 입력 필드 위로 파일을 드래그 앤 드롭하세요. 드래그 시 드롭 영역을 나타내는 강조 테두리가 표시됩니다."
+                    title: "Attaching Files",
+                    body: "Click the clip icon to the left of the input field, or drag and drop files onto the input field. When dragging, the input field border highlights in the accent color to show the drop zone."
                 ),
                 ManualSection(
-                    title: "클립보드 감지",
-                    body: "붙여넣기(⌘V)는 스마트하게 동작합니다. Clarc이 클립보드 내용을 자동으로 감지해 처리합니다.",
+                    title: "Clipboard Detection",
+                    body: "Pasting (⌘V) is smart — Clarc detects what's in the clipboard and handles it automatically.",
                     items: [
-                        KeyValueItem(key: "image", value: "이미지 데이터(PNG/TIFF) → 이미지로 첨부", symbolName: "photo", symbolColor: .blue),
-                        KeyValueItem(key: "file", value: "파일 경로 → 파일로 첨부", symbolName: "doc", symbolColor: .secondary),
-                        KeyValueItem(key: "url", value: "URL → URL 참조로 첨부", symbolName: "link", symbolColor: .accentColor),
-                        KeyValueItem(key: "text", value: "긴 텍스트(2 KB 초과) → 텍스트 첨부 파일로 변환", symbolName: "text.alignleft", symbolColor: .secondary),
+                        KeyValueItem(key: "image", value: "Image data (PNG/TIFF) → attached as an image", symbolName: "photo", symbolColor: .blue),
+                        KeyValueItem(key: "file", value: "File path → attached as a file", symbolName: "doc", symbolColor: .secondary),
+                        KeyValueItem(key: "url", value: "URL → attached as a URL reference", symbolName: "link", symbolColor: .accentColor),
+                        KeyValueItem(key: "text", value: "Long text (>2 KB) → converted to a text attachment", symbolName: "text.alignleft", symbolColor: .secondary),
                     ],
-                    note: "스크린샷을 직접 붙여넣으면 이미지로 자동 첨부됩니다."
+                    note: "Screenshots can be pasted directly — they are automatically attached as images."
                 ),
                 ManualSection(
-                    title: "@ 파일 참조",
-                    body: "입력 필드에 @를 입력하면 프로젝트 파일 검색 팝업이 열립니다. 입력할수록 실시간으로 파일이 필터링됩니다.",
+                    title: "@ File References",
+                    body: "Type @ in the input field to open a project file search popup. Files are filtered in real time as you type.",
                     items: [
-                        KeyValueItem(key: "↑ / ↓", value: "항목 선택"),
-                        KeyValueItem(key: "Return / Tab", value: "메시지에 파일 경로 삽입"),
-                        KeyValueItem(key: "Escape", value: "팝업 닫기"),
+                        KeyValueItem(key: "↑ / ↓", value: "Select item"),
+                        KeyValueItem(key: "Return / Tab", value: "Insert file path into message"),
+                        KeyValueItem(key: "Escape", value: "Close popup"),
                     ]
                 ),
             ]
@@ -432,58 +432,58 @@ enum ManualTopic: String, CaseIterable, Identifiable {
         case .customShortcuts:
             [
                 ManualSection(
-                    title: "단축 버튼이란?",
-                    body: "채팅 영역 상단에 표시되는 빠른 접근 버튼입니다. 자주 사용하는 메시지나 셸 명령어를 클릭 한 번으로 실행할 수 있습니다."
+                    title: "What are Shortcut Buttons?",
+                    body: "Quick-access buttons shown at the top of the chat area. Run frequently used messages or shell commands with a single click."
                 ),
                 ManualSection(
-                    title: "단축 버튼 추가",
-                    body: "툴바의 ⚡ 버튼을 클릭해 단축 버튼 관리자를 열거나, 단축 버튼 바 오른쪽의 + 버튼을 누르세요. 이름, 메시지/명령어, 아이콘, 색상을 설정할 수 있습니다."
+                    title: "Adding a Shortcut",
+                    body: "Click the ⚡ button in the toolbar to open the Shortcut Manager, or press the + button on the right side of the shortcut bar. You can set a name, message/command, icon, and color."
                 ),
                 ManualSection(
-                    title: "터미널 명령어 모드",
-                    body: "\"터미널 명령어로 실행\" 옵션을 활성화하면 채팅 메시지로 전송하는 대신 인스펙터 터미널에서 셸 명령어로 실행됩니다. 프로젝트 디렉토리가 작업 디렉토리로 사용됩니다."
+                    title: "Terminal Command Mode",
+                    body: "Enable the \"Run as terminal command\" option to execute the shortcut as a shell command in the inspector terminal instead of sending it as a chat message. The project directory is used as the working directory."
                 ),
                 ManualSection(
-                    title: "단축 버튼 관리",
-                    body: "설정 → 단축 버튼에서 순서 변경, 편집, 삭제를 할 수 있습니다. 단축 버튼 설정은 프로젝트별로 저장됩니다.",
-                    note: "JSON 가져오기/내보내기로 단축 버튼 설정을 백업하거나 공유할 수 있습니다."
+                    title: "Managing Shortcuts",
+                    body: "Open Settings → Shortcuts to reorder, edit, or delete shortcuts. Shortcut configurations are saved per project.",
+                    note: "JSON import/export is supported for backing up or sharing your shortcut set."
                 ),
             ]
 
         case .inspectorPanel:
             [
                 ManualSection(
-                    title: "인스펙터 패널 열기",
-                    body: "툴바 오른쪽 상단의 ⊟ 버튼을 클릭하면 인스펙터 패널이 토글됩니다. 패널은 창 오른쪽에 도킹되며 터미널과 메모 두 탭으로 구성됩니다."
+                    title: "Opening the Inspector Panel",
+                    body: "Click the sidebar.trailing (⊟) button at the top right of the toolbar to toggle the inspector panel. The panel docks to the right side of the window and contains two tabs: Terminal and Memo."
                 ),
                 ManualSection(
-                    title: "터미널 탭",
-                    body: "현재 프로젝트 디렉토리에서 시작하는 내장 zsh 터미널입니다. 앱을 벗어나지 않고 셸 명령어 실행, 파일 확인, git 관리 등을 할 수 있습니다."
+                    title: "Terminal Tab",
+                    body: "An embedded zsh terminal that opens at the current project's directory. Use it to run shell commands, inspect files, or manage git — all without leaving the app."
                 ),
                 ManualSection(
-                    title: "메모 탭",
-                    body: "프로젝트별 메모 편집기입니다. 잠시 멈추면 자동 저장되며 세션 간에 유지됩니다."
+                    title: "Memo Tab",
+                    body: "A per-project rich text memo editor. Notes are auto-saved after a short pause and persist across sessions. Markdown formatting is supported."
                 ),
                 ManualSection(
-                    title: "인터랙티브 터미널 팝업",
-                    body: "/config, /permissions, /model 등 일부 슬래시 명령어는 별도 인터랙티브 터미널 시트에서 실행됩니다. 명령어가 완료되면 팝업이 자동으로 닫힙니다.",
-                    note: "하단에 종료 코드가 표시됩니다. \"exit 0\"은 명령어가 성공적으로 완료됐음을 의미합니다."
+                    title: "Interactive Terminal Popup",
+                    body: "Some slash commands (such as /config, /permissions, /model) open in a separate interactive terminal sheet. The popup runs the command automatically and closes when it exits.",
+                    note: "The exit code is shown at the bottom — \"exit 0\" means the command completed successfully."
                 ),
             ]
 
         case .github:
             [
                 ManualSection(
-                    title: "GitHub 연동",
-                    body: "사이드바 상단의 GitHub 버튼을 클릭하면 GitHub 패널이 열립니다. GitHub 계정을 연결하면 리포지토리 목록이 표시되고 클릭 한 번으로 Clarc에 추가할 수 있습니다."
+                    title: "GitHub Integration",
+                    body: "Click the GitHub Mark button at the top of the sidebar to open the GitHub panel. After connecting your GitHub account, your repositories are listed and can be added to Clarc with one click."
                 ),
                 ManualSection(
-                    title: "리포지토리 추가",
-                    body: "이름으로 리포지토리를 검색한 뒤 추가를 클릭하세요. Clarc이 자동으로 클론하고 새 프로젝트로 열립니다.",
+                    title: "Adding a Repository",
+                    body: "Search for a repository by name, then click Add. Clarc clones it automatically and opens it as a new project.",
                     items: [
-                        KeyValueItem(key: "lock", value: "비공개 리포지토리", symbolName: "lock", symbolColor: .secondary),
-                        KeyValueItem(key: "globe", value: "공개 리포지토리", symbolName: "globe", symbolColor: .secondary),
-                        KeyValueItem(key: "checkmark", value: "Clarc에 이미 추가됨", symbolName: "checkmark.circle.fill", symbolColor: .green),
+                        KeyValueItem(key: "lock", value: "Private repository", symbolName: "lock", symbolColor: .secondary),
+                        KeyValueItem(key: "globe", value: "Public repository", symbolName: "globe", symbolColor: .secondary),
+                        KeyValueItem(key: "checkmark", value: "Already added to Clarc", symbolName: "checkmark.circle.fill", symbolColor: .green),
                     ]
                 ),
             ]
@@ -491,78 +491,78 @@ enum ManualTopic: String, CaseIterable, Identifiable {
         case .marketplace:
             [
                 ManualSection(
-                    title: "스킬 마켓플레이스",
-                    body: "툴바의 🧠 아이콘을 클릭하면 Anthropic GitHub에 게시된 MCP 플러그인 카탈로그를 탐색할 수 있습니다. 카테고리로 필터링하거나 이름, 설명, 작성자로 검색할 수 있습니다."
+                    title: "Skill Marketplace",
+                    body: "Click the brain icon (🧠) in the toolbar to browse the MCP plugin catalog published on Anthropic's GitHub. Plugins can be filtered by category or searched by name, description, or author."
                 ),
                 ManualSection(
-                    title: "플러그인 설치",
-                    body: "플러그인을 클릭해 상세 정보를 확인한 뒤 설치를 누르세요. 인터랙티브 터미널 팝업이 열리고 설치 명령어가 자동으로 실행됩니다.",
+                    title: "Installing Plugins",
+                    body: "Click a plugin to view its details, then press Install. An interactive terminal popup opens and runs the install command automatically.",
                     items: [
-                        KeyValueItem(key: "clock", value: "미설치", symbolName: "clock", symbolColor: .secondary),
-                        KeyValueItem(key: "arrow.down", value: "설치 중…", symbolName: "arrow.down.circle", symbolColor: .accentColor),
-                        KeyValueItem(key: "checkmark", value: "설치됨", symbolName: "checkmark.circle.fill", symbolColor: .green),
+                        KeyValueItem(key: "clock", value: "Not installed", symbolName: "clock", symbolColor: .secondary),
+                        KeyValueItem(key: "arrow.down", value: "Installing…", symbolName: "arrow.down.circle", symbolColor: .accentColor),
+                        KeyValueItem(key: "checkmark", value: "Installed", symbolName: "checkmark.circle.fill", symbolColor: .green),
                     ],
-                    note: "카탈로그는 5분마다 자동으로 새로고침됩니다."
+                    note: "The catalog refreshes automatically every 5 minutes."
                 ),
             ]
 
         case .statusLine:
             [
                 ManualSection(
-                    title: "상태 표시줄이란?",
-                    body: "채팅 영역 하단에 고정된 정보 바입니다. 현재 프로젝트 경로, 모델, 사용량 한도, 컨텍스트 사용량, 총 응답 시간을 한눈에 확인할 수 있습니다."
+                    title: "What is the Status Line?",
+                    body: "A fixed information bar at the bottom of the chat area. It shows the current project path, model, rate limit usage, context window usage, and total response time at a glance."
                 ),
                 ManualSection(
-                    title: "표시 항목",
-                    body: "상태 표시줄 왼쪽부터 오른쪽 순서로 다음 정보가 표시됩니다.",
+                    title: "Displayed Items",
+                    body: "Items are shown left to right in the status line.",
                     items: [
-                        KeyValueItem(key: "folder", value: "프로젝트 경로 — 현재 선택된 프로젝트의 폴더 경로 (홈 디렉토리는 ~로 축약)", symbolName: "folder.fill", symbolColor: .orange),
-                        KeyValueItem(key: "cpu", value: "모델 — 현재 세션에서 사용 중인 Claude 모델 이름", symbolName: "cpu", symbolColor: .green),
-                        KeyValueItem(key: "clock", value: "5h 한도 — 최근 5시간 API 사용량 (막대 그래프 + % + 리셋까지 남은 시간)", symbolName: "clock", symbolColor: .secondary),
-                        KeyValueItem(key: "calendar", value: "7d 한도 — 최근 7일 API 사용량 (막대 그래프 + % + 리셋까지 남은 시간)", symbolName: "calendar", symbolColor: .secondary),
-                        KeyValueItem(key: "memorychip", value: "context — 현재 세션의 컨텍스트 윈도우 사용률 (막대 그래프 + %)", symbolName: "memorychip", symbolColor: .secondary),
-                        KeyValueItem(key: "stopwatch", value: "총 응답 시간 — 현재 세션에서 Claude가 응답하는 데 걸린 시간의 합계", symbolName: "stopwatch", symbolColor: .secondary),
+                        KeyValueItem(key: "folder", value: "Project path — folder path of the currently selected project (home directory abbreviated as ~)", symbolName: "folder.fill", symbolColor: .orange),
+                        KeyValueItem(key: "cpu", value: "Model — name of the Claude model in use for this session", symbolName: "cpu", symbolColor: .green),
+                        KeyValueItem(key: "clock", value: "5h limit — API usage over the last 5 hours (bar + % + time until reset)", symbolName: "clock", symbolColor: .secondary),
+                        KeyValueItem(key: "calendar", value: "7d limit — API usage over the last 7 days (bar + % + time until reset)", symbolName: "calendar", symbolColor: .secondary),
+                        KeyValueItem(key: "memorychip", value: "context — context window usage for the current session (bar + %)", symbolName: "memorychip", symbolColor: .secondary),
+                        KeyValueItem(key: "stopwatch", value: "Total response time — cumulative time Claude spent generating responses in this session", symbolName: "stopwatch", symbolColor: .secondary),
                     ]
                 ),
                 ManualSection(
-                    title: "사용량 색상",
-                    body: "막대 그래프와 퍼센트 수치는 사용량에 따라 색이 바뀝니다.",
+                    title: "Usage Colors",
+                    body: "The bar graph and percentage change color based on usage level.",
                     items: [
-                        KeyValueItem(key: "green", value: "70% 미만 — 정상", symbolName: "circle.fill", symbolColor: .green),
-                        KeyValueItem(key: "yellow", value: "70–89% — 주의", symbolName: "circle.fill", symbolColor: .orange),
-                        KeyValueItem(key: "red", value: "90% 이상 — 위험", symbolName: "circle.fill", symbolColor: .red),
+                        KeyValueItem(key: "green", value: "Below 70% — normal", symbolName: "circle.fill", symbolColor: .green),
+                        KeyValueItem(key: "yellow", value: "70–89% — caution", symbolName: "circle.fill", symbolColor: .orange),
+                        KeyValueItem(key: "red", value: "90% or above — critical", symbolName: "circle.fill", symbolColor: .red),
                     ],
-                    note: "사용량 정보는 응답이 완료될 때마다 자동으로 갱신됩니다. 앱 시작 시 초기 조회에 실패하면 5초 후 한 번 재시도합니다."
+                    note: "Usage data refreshes automatically after each response. If the initial fetch fails on launch, it retries once after 5 seconds."
                 ),
             ]
 
         case .permissions:
             [
                 ManualSection(
-                    title: "권한 요청이란?",
-                    body: "Claude가 파일을 편집하거나 명령어를 실행하기 전에 승인을 요청합니다. 도구 이름과 인자를 보여주는 모달이 표시됩니다."
+                    title: "What are Permission Requests?",
+                    body: "Before Claude edits files or runs commands, it pauses and asks for your approval. A modal appears showing the tool name and its arguments."
                 ),
                 ManualSection(
-                    title: "승인 옵션",
-                    body: "각 권한 요청에는 세 가지 선택지가 있습니다.",
+                    title: "Approval Options",
+                    body: "Each permission request offers three choices.",
                     items: [
-                        KeyValueItem(key: "Allow", value: "이 단일 작업만 승인"),
-                        KeyValueItem(key: "Allow Session", value: "현재 세션에서 동일한 유형의 모든 요청을 승인"),
-                        KeyValueItem(key: "Deny", value: "작업 거절"),
+                        KeyValueItem(key: "Allow", value: "Approve this single action"),
+                        KeyValueItem(key: "Allow Session", value: "Approve all future requests of this type for the current session"),
+                        KeyValueItem(key: "Deny", value: "Reject the action"),
                     ],
-                    note: "아무 조치를 취하지 않으면 5분 후 자동으로 거부됩니다. Return 키로 허용, Escape 키로 거부할 수 있습니다."
+                    note: "If no action is taken, the request is automatically denied after 5 minutes. Press Return to Allow, or Escape to Deny."
                 ),
                 ManualSection(
-                    title: "권한 모드",
-                    body: "채팅 영역 상단의 권한 모드 드롭다운에서 Claude의 권한 처리 방식을 전환할 수 있습니다.",
+                    title: "Permission Mode",
+                    body: "Use the permission mode dropdown at the top of the chat to switch how Claude handles permissions.",
                     items: [
-                        KeyValueItem(key: "권한 요청", value: "기본 모드 — 파일 편집과 명령어 실행 시 승인 요청"),
-                        KeyValueItem(key: "편집 수락", value: "작업 디렉토리 파일 편집을 자동 수락 (명령어는 여전히 승인 필요)"),
-                        KeyValueItem(key: "계획 모드", value: "파일 읽기만 허용, 실제 편집 없이 분석과 계획만 제시"),
-                        KeyValueItem(key: "자동 모드", value: "AI가 안전한 작업은 자동 승인, 위험한 작업만 승인 요청 (Max/Team/Enterprise/API 플랜 + Sonnet/Opus 4.6+ 필요)"),
-                        KeyValueItem(key: "권한 건너뛰기", value: "모든 권한 검사 생략 — .git/.vscode/.claude 디렉토리 쓰기는 여전히 승인 필요"),
+                        KeyValueItem(key: "Ask", value: "Default — prompts for approval before file edits and commands"),
+                        KeyValueItem(key: "Accept", value: "Auto-accepts file edits in the working directory (commands still require approval)"),
+                        KeyValueItem(key: "Plan", value: "Read-only — analyzes and plans without making edits"),
+                        KeyValueItem(key: "Auto", value: "AI auto-approves safe operations, prompts only for risky ones (requires Max/Team/Enterprise/API plan + Sonnet/Opus 4.6+)"),
+                        KeyValueItem(key: "Bypass", value: "Skips all permission checks — writes to .git/.vscode/.claude directories still require approval"),
                     ],
-                    note: "권한 건너뛰기 모드는 완전히 신뢰하는 프로젝트에서만 사용하세요. 모드 변경은 다음 메시지 전송부터 적용됩니다."
+                    note: "Only enable Skip Permissions on projects you fully trust. Mode changes take effect from the next message."
                 ),
             ]
         }

@@ -127,6 +127,24 @@
 "Read failed: %@" = "읽기 실패: %@";
 "Save failed: %@" = "저장 실패: %@";
 
+// MARK: - ChatToolbarControls
+"Permission Mode" = "권한 모드";
+"Ask" = "권한 요청";
+"Accept Edits" = "편집 수락";
+"Plan" = "계획 모드";
+"Auto" = "자동 모드";
+"Bypass" = "권한 건너뛰기";
+"Model Picker" = "모델";
+"Effort Picker" = "작업량";
+"Auto Effort" = "자동";
+"Low" = "낮음";
+"Medium" = "보통";
+"High" = "높음";
+"XHigh" = "매우 높음";
+"Max" = "최대";
+"Permission mode: %@" = "권한 모드: %@";
+"Effort level (--effort)" = "작업량(--effort) 설정";
+
 // MARK: - PermissionModal
 "Permission Request" = "권한 요청";
 "Command" = "커맨드";
@@ -175,6 +193,7 @@
 "Inspector Panel" = "인스펙터 패널";
 "GitHub Integration" = "GitHub 연동";
 "Permission Requests" = "권한 요청";
+"Status Line" = "상태 표시줄";
 
 // Overview
 "What is Clarc?" = "Clarc란?";
@@ -354,5 +373,17 @@
 "Approve all future requests of this type for the current session" = "현재 세션 동안 이 유형의 모든 요청을 승인";
 "Reject the action" = "작업 거부";
 "If no action is taken, the request is automatically denied after 5 minutes. Press Return to Allow, or Escape to Deny." = "5분 안에 응답이 없으면 요청이 자동으로 거부됩니다. Return으로 허용, Escape로 거부할 수 있습니다.";
+// Permission Mode sections
+"Use the permission mode dropdown at the top of the chat to control how Claude requests approval before running actions." = "채팅 상단의 권한 모드 드롭다운에서 Claude가 작업 전에 승인을 요청하는 방식을 제어할 수 있습니다.";
+"Use the permission mode dropdown at the top of the chat to switch how Claude handles permissions." = "채팅 상단의 권한 모드 드롭다운에서 Claude의 권한 처리 방식을 전환할 수 있습니다.";
+"Default — prompts for approval before file edits and commands" = "기본 모드 — 파일 편집과 명령어 실행 시 승인 요청";
+"Auto-accepts file edits in the working directory (commands still require approval)" = "작업 디렉토리 파일 편집을 자동 수락 (명령어는 여전히 승인 필요)";
+"Read-only — analyzes and plans without making edits" = "파일 읽기만 허용, 실제 편집 없이 계획만 제시";
+"AI auto-approves safe operations, prompts only for risky ones (requires Max/Team/Enterprise/API plan + Sonnet/Opus 4.6+)" = "AI가 안전한 작업은 자동 승인, 위험한 작업만 승인 요청 (Max/Team/Enterprise/API 플랜 + Sonnet/Opus 4.6+ 필요)";
+"Skips all permission checks — use only in isolated environments" = "모든 권한 검사 생략 — 격리된 환경에서만 사용 권장";
+"Skips all permission checks — writes to .git/.vscode/.claude directories still require approval" = "모든 권한 검사 생략 — .git/.vscode/.claude 디렉토리 쓰기는 여전히 승인 필요";
+"Only enable Skip Permissions on projects you fully trust. Mode changes take effect from the next message." = "완전히 신뢰하는 프로젝트에서만 활성화하세요. 모드 변경은 다음 메시지 전송부터 적용됩니다.";
+"Double-click" = "더블클릭";
+
 "Skip Permissions Mode" = "권한 건너뛰기 모드";
 "Toggle the shield icon at the top of the chat to auto-approve all permission requests. This speeds up tasks but also auto-executes potentially dangerous operations — use with caution." = "채팅 상단의 방패 아이콘을 토글하면 모든 권한 요청이 자동으로 승인됩니다. 작업 속도는 빨라지지만 잠재적으로 위험한 작업도 자동 실행되므로 주의해서 사용하세요.";

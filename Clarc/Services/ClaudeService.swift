@@ -16,11 +16,11 @@ nonisolated enum PermissionMode: String, CaseIterable, Sendable, Codable {
 
     var displayName: String {
         switch self {
-        case .default: return "권한 요청"
-        case .acceptEdits: return "편집 수락"
-        case .plan: return "계획 모드"
-        case .auto: return "자동 모드"
-        case .bypassPermissions: return "권한 건너뛰기"
+        case .default: return "Ask"
+        case .acceptEdits: return "Accept Edits"
+        case .plan: return "Plan"
+        case .auto: return "Auto"
+        case .bypassPermissions: return "Bypass"
         }
     }
 

@@ -548,6 +548,17 @@ struct SidebarTabShortcuts: View {
 
 // MARK: - Shared Chat UI Components
 
+private func effortDisplayName(_ effort: String) -> String {
+    switch effort {
+    case "low": return "Low"
+    case "medium": return "Medium"
+    case "high": return "High"
+    case "xhigh": return "XHigh"
+    case "max": return "Max"
+    default: return effort.capitalized
+    }
+}
+
 struct ChatToolbarControls: View {
     @Environment(AppState.self) private var appState
     @Environment(WindowState.self) private var windowState
@@ -568,33 +579,22 @@ struct ChatToolbarControls: View {
         )
     }
 
-    private func effortDisplayName(_ effort: String) -> String {
-        switch effort {
-        case "low": return "낮음"
-        case "medium": return "보통"
-        case "high": return "높음"
-        case "xhigh": return "매우 높음"
-        case "max": return "최대로"
-        default: return effort.capitalized
-        }
-    }
-
     var body: some View {
         HStack(spacing: 8) {
             Picker("", selection: Bindable(appState).permissionMode) {
-                Section("모드") {
+                Section("Permission Mode") {
                     ForEach(PermissionMode.allCases, id: \.self) { mode in
-                        Text(mode.displayName).tag(mode)
+                        Text(LocalizedStringKey(mode.displayName)).tag(mode)
                     }
                 }
             }
             .labelsHidden()
             .pickerStyle(.menu)
             .fixedSize()
-            .help("권한 모드: \(appState.permissionMode.displayName)")
+            .help("Permission mode: \(appState.permissionMode.displayName)")
 
             Picker("", selection: modelBinding) {
-                Section("모델") {
+                Section("Model Picker") {
                     ForEach(AppState.availableModels, id: \.self) { model in
                         Text(model.capitalized).tag(model)
                     }
@@ -605,8 +605,8 @@ struct ChatToolbarControls: View {
             .fixedSize()
 
             Picker("", selection: effortBinding) {
-                Section("작업량") {
-                    Text("자동").tag("auto")
+                Section("Effort Picker") {
+                    Text("Auto Effort").tag("auto")
                     ForEach(AppState.availableEfforts, id: \.self) { effort in
                         Text(effortDisplayName(effort)).tag(effort)
                     }
@@ -615,7 +615,7 @@ struct ChatToolbarControls: View {
             .labelsHidden()
             .pickerStyle(.menu)
             .fixedSize()
-            .help("작업량(--effort) 설정")
+            .help("Effort level (--effort)")
         }
     }
 }
@@ -752,7 +752,7 @@ struct EffortPickerSheet: View {
                     let effort = items[index]
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(effort.map { $0 == "xhigh" ? "XHigh" : $0.capitalized } ?? "Auto")
+                            Text(effort.map { effortDisplayName($0) } ?? "Auto")
                                 .foregroundStyle(ClaudeTheme.textPrimary)
                             if effort == "max" {
                                 Text("Opus 4.6 only")

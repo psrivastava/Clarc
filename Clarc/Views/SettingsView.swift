@@ -66,6 +66,10 @@ struct GeneralSettingsTab: View {
                 Divider()
                 modelSection(appState: $appState.selectedModel)
                 Divider()
+                permissionModeSection
+                Divider()
+                effortSection
+                Divider()
                 notificationsSection(appState: $appState.notificationsEnabled)
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
@@ -101,6 +105,72 @@ struct GeneralSettingsTab: View {
             Text(AppState.modelDescription(appState.wrappedValue))
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Permission Mode Section
+
+    private var permissionModeSection: some View {
+        @Bindable var appState = appState
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Default Permission Mode")
+                .font(.system(size: 13, weight: .semibold))
+
+            Text("Used for new sessions. You can override the permission mode per session from the toolbar.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            Picker("", selection: $appState.permissionMode) {
+                ForEach(PermissionMode.allCases, id: \.self) { mode in
+                    Text(LocalizedStringKey(mode.displayName)).tag(mode)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+
+            Text(AppState.permissionModeDescription(appState.permissionMode))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Effort Section
+
+    private var effortSection: some View {
+        @Bindable var appState = appState
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Default Effort Level")
+                .font(.system(size: 13, weight: .semibold))
+
+            Text("Used for new sessions. You can override the effort level per session from the toolbar.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            Picker("", selection: $appState.selectedEffort) {
+                Text("Auto").tag("auto")
+                ForEach(AppState.availableEfforts, id: \.self) { effort in
+                    Text(effortDisplayName(effort)).tag(effort)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+
+            Text(AppState.effortDescription(appState.selectedEffort))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func effortDisplayName(_ effort: String) -> String {
+        switch effort {
+        case "low":    return "Low"
+        case "medium": return "Medium"
+        case "high":   return "High"
+        case "xhigh":  return "Extra High"
+        case "max":    return "Max"
+        default:       return effort.capitalized
         }
     }
 

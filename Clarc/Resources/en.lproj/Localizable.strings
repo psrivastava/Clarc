@@ -186,6 +186,21 @@
 "model.desc.sonnet1m" = "Sonnet with 1 million token context window for long sessions";
 "model.desc.haiku" = "Fast and efficient model for simple tasks";
 
+// MARK: - Permission Mode Descriptions
+"perm.desc.default" = "Prompts before each file edit or shell command. Best for sensitive work or getting started.";
+"perm.desc.acceptEdits" = "Auto-approves file edits and common filesystem commands (mkdir, touch, mv, cp). Still prompts for other shell commands.";
+"perm.desc.plan" = "Read-only mode. Claude researches and proposes a plan without making any changes. Same prompts as default for other actions.";
+"perm.desc.auto" = "Runs without permission prompts. A background classifier reviews each action for safety before it executes.";
+"perm.desc.bypassPermissions" = "Skips all permission checks and safety gates. Use only in isolated containers or VMs without internet access.";
+
+// MARK: - Effort Level Descriptions
+"effort.desc.auto" = "Uses the model's default effort level, chosen automatically based on the active model and plan.";
+"effort.desc.low" = "Reserve for short, scoped, latency-sensitive tasks that are not intelligence-sensitive.";
+"effort.desc.medium" = "Reduces token usage for cost-sensitive work that can trade off some intelligence.";
+"effort.desc.high" = "Balances token usage and intelligence. Good minimum for intelligence-sensitive work.";
+"effort.desc.xhigh" = "Best results for most coding and agentic tasks. Recommended default on Opus 4.7.";
+"effort.desc.max" = "Deepest reasoning with no token constraint. Current session only. Best for demanding, complex tasks.";
+
 // MARK: - AppState
 "Previous conversation has been compacted" = "Previous conversation has been compacted";
 "No response received" = "No response received";

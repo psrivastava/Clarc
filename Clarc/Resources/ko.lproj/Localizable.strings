@@ -186,6 +186,21 @@
 "model.desc.sonnet1m" = "긴 세션을 위한 100만 토큰 컨텍스트 윈도우 Sonnet";
 "model.desc.haiku" = "간단한 작업을 위한 빠르고 효율적인 모델";
 
+// MARK: - Permission Mode Descriptions
+"perm.desc.default" = "파일 편집이나 셸 명령 실행 전마다 확인을 요청합니다. 민감한 작업이나 처음 시작할 때 적합합니다.";
+"perm.desc.acceptEdits" = "파일 편집 및 일반 파일시스템 명령(mkdir, touch, mv, cp)을 자동 승인합니다. 다른 셸 명령은 여전히 확인을 요청합니다.";
+"perm.desc.plan" = "읽기 전용 모드입니다. Claude가 변경 없이 코드베이스를 분석하고 계획을 제안합니다. 나머지 작업에는 기본 모드와 동일한 확인을 적용합니다.";
+"perm.desc.auto" = "권한 확인 없이 실행됩니다. 백그라운드 분류기가 각 작업을 실행 전에 안전 여부를 검토합니다.";
+"perm.desc.bypassPermissions" = "모든 권한 확인 및 안전 장치를 건너뜁니다. 인터넷이 차단된 컨테이너나 VM 환경에서만 사용하세요.";
+
+// MARK: - Effort Level Descriptions
+"effort.desc.auto" = "활성 모델과 플랜에 따라 자동으로 결정되는 모델 기본값을 사용합니다.";
+"effort.desc.low" = "지연 시간에 민감하고 복잡하지 않은 짧고 범위가 명확한 작업에 사용하세요.";
+"effort.desc.medium" = "일부 정확도를 양보하더라도 토큰 비용을 줄이고 싶을 때 적합합니다.";
+"effort.desc.high" = "토큰 사용량과 지능 수준을 균형 있게 유지합니다. 정확도가 중요한 작업의 최소 권장 수준입니다.";
+"effort.desc.xhigh" = "대부분의 코딩 및 에이전트 작업에서 최상의 결과를 제공합니다. Opus 4.7의 권장 기본값입니다.";
+"effort.desc.max" = "토큰 제한 없이 가장 깊은 추론을 제공합니다. 현재 세션에만 적용됩니다. 복잡하고 까다로운 작업에 적합합니다.";
+
 // MARK: - AppState
 "Previous conversation has been compacted" = "이전 대화가 압축되었습니다";
 "No response received" = "응답을 받지 못했습니다";

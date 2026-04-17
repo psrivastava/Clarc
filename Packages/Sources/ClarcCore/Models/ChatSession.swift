@@ -9,6 +9,8 @@ public struct ChatSession: Identifiable, Codable, Sendable {
     public var updatedAt: Date
     public var isPinned: Bool
     public var model: String?
+    public var effort: String?
+    public var permissionMode: PermissionMode?
 
     public init(
         id: String,
@@ -18,7 +20,9 @@ public struct ChatSession: Identifiable, Codable, Sendable {
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
         isPinned: Bool = false,
-        model: String? = nil
+        model: String? = nil,
+        effort: String? = nil,
+        permissionMode: PermissionMode? = nil
     ) {
         self.id = id
         self.projectId = projectId
@@ -28,10 +32,12 @@ public struct ChatSession: Identifiable, Codable, Sendable {
         self.updatedAt = updatedAt
         self.isPinned = isPinned
         self.model = model
+        self.effort = effort
+        self.permissionMode = permissionMode
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, projectId, title, messages, createdAt, updatedAt, isPinned, model
+        case id, projectId, title, messages, createdAt, updatedAt, isPinned, model, effort, permissionMode
     }
 
     public init(from decoder: Decoder) throws {
@@ -44,6 +50,8 @@ public struct ChatSession: Identifiable, Codable, Sendable {
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
         isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
         model = try container.decodeIfPresent(String.self, forKey: .model)
+        effort = try container.decodeIfPresent(String.self, forKey: .effort)
+        permissionMode = try container.decodeIfPresent(PermissionMode.self, forKey: .permissionMode)
     }
 
     public struct Summary: Identifiable, Codable, Sendable {
@@ -54,8 +62,10 @@ public struct ChatSession: Identifiable, Codable, Sendable {
         public var updatedAt: Date
         public var isPinned: Bool
         public var model: String?
+        public var effort: String?
+        public var permissionMode: PermissionMode?
 
-        public init(id: String, projectId: UUID, title: String, createdAt: Date, updatedAt: Date, isPinned: Bool, model: String? = nil) {
+        public init(id: String, projectId: UUID, title: String, createdAt: Date, updatedAt: Date, isPinned: Bool, model: String? = nil, effort: String? = nil, permissionMode: PermissionMode? = nil) {
             self.id = id
             self.projectId = projectId
             self.title = title
@@ -63,6 +73,8 @@ public struct ChatSession: Identifiable, Codable, Sendable {
             self.updatedAt = updatedAt
             self.isPinned = isPinned
             self.model = model
+            self.effort = effort
+            self.permissionMode = permissionMode
         }
     }
 
@@ -74,7 +86,9 @@ public struct ChatSession: Identifiable, Codable, Sendable {
             createdAt: createdAt,
             updatedAt: updatedAt,
             isPinned: isPinned,
-            model: model
+            model: model,
+            effort: effort,
+            permissionMode: permissionMode
         )
     }
 }
@@ -83,6 +97,7 @@ extension ChatSession.Summary {
     public func makeSession() -> ChatSession {
         ChatSession(id: id, projectId: projectId, title: title,
                     messages: [], createdAt: createdAt,
-                    updatedAt: updatedAt, isPinned: isPinned, model: model)
+                    updatedAt: updatedAt, isPinned: isPinned,
+                    model: model, effort: effort, permissionMode: permissionMode)
     }
 }

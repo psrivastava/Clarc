@@ -93,6 +93,9 @@ public final class WindowState {
     /// Per-session effort override. When set, passed as --effort to the CLI.
     /// Cleared when a new chat is started or a different session is selected.
     public var sessionEffort: String?
+    /// Per-session permission mode override. When set, overrides the global permissionMode.
+    /// Cleared when a new chat is started or a different session is selected.
+    public var sessionPermissionMode: PermissionMode?
     public var requestInputFocus = false
     public var registryVersion = 0
     public var isInitialized = false

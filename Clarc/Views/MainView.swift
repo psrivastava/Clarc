@@ -574,14 +574,21 @@ struct ChatToolbarControls: View {
         Binding(
             get: { windowState.sessionEffort ?? "auto" },
             set: { newValue in
-                windowState.sessionEffort = newValue == "auto" ? nil : newValue
+                appState.setSessionEffort(newValue == "auto" ? nil : newValue, in: windowState)
             }
+        )
+    }
+
+    private var permissionModeBinding: Binding<PermissionMode> {
+        Binding(
+            get: { windowState.sessionPermissionMode ?? appState.permissionMode },
+            set: { appState.setSessionPermissionMode($0, in: windowState) }
         )
     }
 
     var body: some View {
         HStack(spacing: 8) {
-            Picker("", selection: Bindable(appState).permissionMode) {
+            Picker("", selection: permissionModeBinding) {
                 Section("Permission Mode") {
                     ForEach(PermissionMode.allCases, id: \.self) { mode in
                         Text(LocalizedStringKey(mode.displayName)).tag(mode)
@@ -591,7 +598,7 @@ struct ChatToolbarControls: View {
             .labelsHidden()
             .pickerStyle(.menu)
             .fixedSize()
-            .help("Permission mode: \(appState.permissionMode.displayName)")
+            .help("Permission mode: \((windowState.sessionPermissionMode ?? appState.permissionMode).displayName)")
 
             Picker("", selection: modelBinding) {
                 Section("Model Picker") {

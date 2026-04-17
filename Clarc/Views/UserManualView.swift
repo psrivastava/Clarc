@@ -177,6 +177,7 @@ enum ManualTopic: String, CaseIterable, Identifiable {
     case marketplace
     case permissions
     case statusLine
+    case settings
 
     var id: String { rawValue }
 
@@ -194,6 +195,7 @@ enum ManualTopic: String, CaseIterable, Identifiable {
         case .marketplace:     "Skill Marketplace"
         case .permissions:     "Permission Requests"
         case .statusLine:      "Status Line"
+        case .settings:        "Settings & Themes"
         }
     }
 
@@ -211,6 +213,7 @@ enum ManualTopic: String, CaseIterable, Identifiable {
         case .marketplace:     "brain.head.profile"
         case .permissions:     "checkmark.shield"
         case .statusLine:      "chart.bar.fill"
+        case .settings:        "gear"
         }
     }
 
@@ -277,6 +280,10 @@ enum ManualTopic: String, CaseIterable, Identifiable {
                     note: "Files larger than 1 MB cannot be previewed."
                 ),
                 ManualSection(
+                    title: "Hidden Files",
+                    body: "Toggle the eye icon in the Files tab header to show or hide dotfiles (files starting with a period, such as .env or .gitignore)."
+                ),
+                ManualSection(
                     title: "Git Status",
                     body: "The number of changed files is shown at the bottom of the sidebar."
                 ),
@@ -309,6 +316,18 @@ enum ManualTopic: String, CaseIterable, Identifiable {
                 ManualSection(
                     title: "Changing the Model",
                     body: "Use the model dropdown at the top of the chat area to switch Claude models."
+                ),
+                ManualSection(
+                    title: "Effort Level",
+                    body: "Use the effort dropdown next to the model picker to control how much reasoning Claude applies. The selection is per-session.",
+                    items: [
+                        KeyValueItem(key: "Auto Effort", value: "effort.desc.auto"),
+                        KeyValueItem(key: "Low", value: "effort.desc.low"),
+                        KeyValueItem(key: "Medium", value: "effort.desc.medium"),
+                        KeyValueItem(key: "High", value: "effort.desc.high"),
+                        KeyValueItem(key: "XHigh", value: "effort.desc.xhigh"),
+                        KeyValueItem(key: "Max", value: "effort.desc.max"),
+                    ]
                 ),
                 ManualSection(
                     title: "Permission Mode",
@@ -462,7 +481,24 @@ enum ManualTopic: String, CaseIterable, Identifiable {
                 ),
                 ManualSection(
                     title: "Memo Tab",
-                    body: "A per-project rich text memo editor. Notes are auto-saved after a short pause and persist across sessions. Markdown formatting is supported."
+                    body: "A per-project rich text memo editor. Notes are auto-saved after a short pause and persist across sessions. Use the toolbar at the bottom for formatting, or the keyboard shortcuts below.",
+                    items: [
+                        KeyValueItem(key: "⌘B", value: "Bold"),
+                        KeyValueItem(key: "⌘I", value: "Italic"),
+                        KeyValueItem(key: "⌘U", value: "Underline"),
+                        KeyValueItem(key: "H1 / H2 / H3", value: "Heading levels (# / ## / ###)"),
+                        KeyValueItem(key: "- ", value: "Unordered list (auto-continues on Return)"),
+                        KeyValueItem(key: "⌘⇧L", value: "Toggle checkbox"),
+                        KeyValueItem(key: "⌘K", value: "Insert link"),
+                    ]
+                ),
+                ManualSection(
+                    title: "Reset Buttons",
+                    body: "Each inspector tab has a reset button (the circular arrow at the top right of the panel).",
+                    items: [
+                        KeyValueItem(key: "Reset Terminal", value: "Terminate the current shell and start a fresh zsh session"),
+                        KeyValueItem(key: "Clear Memo", value: "Erase the memo for the current project (cannot be undone)"),
+                    ]
                 ),
                 ManualSection(
                     title: "Interactive Terminal Popup",
@@ -563,6 +599,46 @@ enum ManualTopic: String, CaseIterable, Identifiable {
                         KeyValueItem(key: "Bypass", value: "Skips all permission checks — writes to .git/.vscode/.claude directories still require approval"),
                     ],
                     note: "Only enable Skip Permissions on projects you fully trust. Mode changes take effect from the next message."
+                ),
+            ]
+
+        case .settings:
+            [
+                ManualSection(
+                    title: "Opening Settings",
+                    body: "Choose Clarc → Settings from the menu bar or press ⌘, to open the Settings window. Settings are organized into three tabs: General, Slash Commands, and Shortcuts."
+                ),
+                ManualSection(
+                    title: "General Tab",
+                    body: "The General tab configures session defaults. Changes apply to newly created sessions — existing sessions keep their current values.",
+                    items: [
+                        KeyValueItem(key: "Theme", value: "Accent color palette (Terracotta, Ocean, Forest, Lavender, Midnight, Amber)"),
+                        KeyValueItem(key: "Default Model", value: "Claude model used when starting a new session"),
+                        KeyValueItem(key: "Default Permission Mode", value: "Permission mode applied to new sessions"),
+                        KeyValueItem(key: "Default Effort Level", value: "Reasoning effort applied to new sessions"),
+                        KeyValueItem(key: "Notifications", value: "Show a system notification when a response completes while Clarc is in the background"),
+                    ],
+                    note: "Model, permission mode, and effort can also be overridden per session from the toolbar — the chosen value sticks to that session."
+                ),
+                ManualSection(
+                    title: "Themes",
+                    body: "Clarc ships with six accent color themes. Preview each one directly from the theme picker — the whole app recolors live as you choose.",
+                    items: [
+                        KeyValueItem(key: "Terracotta", value: "Claude default — warm orange-red"),
+                        KeyValueItem(key: "Ocean", value: "Cool blue"),
+                        KeyValueItem(key: "Forest", value: "Deep green"),
+                        KeyValueItem(key: "Lavender", value: "Soft purple"),
+                        KeyValueItem(key: "Midnight", value: "Dark indigo"),
+                        KeyValueItem(key: "Amber", value: "Warm yellow"),
+                    ]
+                ),
+                ManualSection(
+                    title: "Slash Commands & Shortcuts Tabs",
+                    body: "The other two Settings tabs manage per-project slash commands and shortcut buttons. Both support JSON import/export so you can back up or share your configuration."
+                ),
+                ManualSection(
+                    title: "Checking for Updates",
+                    body: "Open Clarc → Check for Updates… to run Sparkle's update check manually. Updates are also checked automatically on launch."
                 ),
             ]
         }

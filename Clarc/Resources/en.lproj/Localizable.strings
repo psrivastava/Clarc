@@ -416,3 +416,57 @@
 
 "Skip Permissions Mode" = "Skip Permissions Mode";
 "Toggle the shield icon at the top of the chat to auto-approve all permission requests. This speeds up tasks but also auto-executes potentially dangerous operations — use with caution." = "Toggle the shield icon at the top of the chat to auto-approve all permission requests. This speeds up tasks but also auto-executes potentially dangerous operations — use with caution.";
+
+// MARK: - UserManualView additions
+// Effort Level (Chat Basics)
+"Effort Level" = "Effort Level";
+"Use the effort dropdown next to the model picker to control how much reasoning Claude applies. The selection is per-session." = "Use the effort dropdown next to the model picker to control how much reasoning Claude applies. The selection is per-session.";
+
+// Memo Tab formatting
+"Use the toolbar at the bottom for formatting, or the keyboard shortcuts below." = "Use the toolbar at the bottom for formatting, or the keyboard shortcuts below.";
+"Toggle checkbox" = "Toggle checkbox";
+"Insert link" = "Insert link";
+"Underline" = "Underline";
+
+// Inspector Panel reset buttons
+"Reset Buttons" = "Reset Buttons";
+"Each inspector tab has a reset button (the circular arrow at the top right of the panel)." = "Each inspector tab has a reset button (the circular arrow at the top right of the panel).";
+"Reset Terminal" = "Reset Terminal";
+"Clear Memo" = "Clear Memo";
+"Terminate the current shell and start a fresh zsh session" = "Terminate the current shell and start a fresh zsh session";
+"Erase the memo for the current project (cannot be undone)" = "Erase the memo for the current project (cannot be undone)";
+
+// Hidden files toggle
+"Hidden Files" = "Hidden Files";
+"Toggle the eye icon in the Files tab header to show or hide dotfiles (files starting with a period, such as .env or .gitignore)." = "Toggle the eye icon in the Files tab header to show or hide dotfiles (files starting with a period, such as .env or .gitignore).";
+
+// Settings & Themes topic
+"Settings & Themes" = "Settings & Themes";
+"Opening Settings" = "Opening Settings";
+"Choose Clarc → Settings from the menu bar or press ⌘, to open the Settings window. Settings are organized into three tabs: General, Slash Commands, and Shortcuts." = "Choose Clarc → Settings from the menu bar or press ⌘, to open the Settings window. Settings are organized into three tabs: General, Slash Commands, and Shortcuts.";
+"General Tab" = "General Tab";
+"The General tab configures session defaults. Changes apply to newly created sessions — existing sessions keep their current values." = "The General tab configures session defaults. Changes apply to newly created sessions — existing sessions keep their current values.";
+"Accent color palette (Terracotta, Ocean, Forest, Lavender, Midnight, Amber)" = "Accent color palette (Terracotta, Ocean, Forest, Lavender, Midnight, Amber)";
+"Claude model used when starting a new session" = "Claude model used when starting a new session";
+"Permission mode applied to new sessions" = "Permission mode applied to new sessions";
+"Reasoning effort applied to new sessions" = "Reasoning effort applied to new sessions";
+"Show a system notification when a response completes while Clarc is in the background" = "Show a system notification when a response completes while Clarc is in the background";
+"Model, permission mode, and effort can also be overridden per session from the toolbar — the chosen value sticks to that session." = "Model, permission mode, and effort can also be overridden per session from the toolbar — the chosen value sticks to that session.";
+"Themes" = "Themes";
+"Clarc ships with six accent color themes. Preview each one directly from the theme picker — the whole app recolors live as you choose." = "Clarc ships with six accent color themes. Preview each one directly from the theme picker — the whole app recolors live as you choose.";
+"Terracotta" = "Terracotta";
+"Ocean" = "Ocean";
+"Forest" = "Forest";
+"Lavender" = "Lavender";
+"Midnight" = "Midnight";
+"Amber" = "Amber";
+"Claude default — warm orange-red" = "Claude default — warm orange-red";
+"Cool blue" = "Cool blue";
+"Deep green" = "Deep green";
+"Soft purple" = "Soft purple";
+"Dark indigo" = "Dark indigo";
+"Warm yellow" = "Warm yellow";
+"Slash Commands & Shortcuts Tabs" = "Slash Commands & Shortcuts Tabs";
+"The other two Settings tabs manage per-project slash commands and shortcut buttons. Both support JSON import/export so you can back up or share your configuration." = "The other two Settings tabs manage per-project slash commands and shortcut buttons. Both support JSON import/export so you can back up or share your configuration.";
+"Checking for Updates" = "Checking for Updates";
+"Open Clarc → Check for Updates… to run Sparkle's update check manually. Updates are also checked automatically on launch." = "Open Clarc → Check for Updates… to run Sparkle's update check manually. Updates are also checked automatically on launch.";

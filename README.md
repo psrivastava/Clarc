@@ -1,8 +1,10 @@
 # Clarc
 
-**Native macOS desktop client for Claude Code**
+**The terminal was for the few. Clarc is for everyone.**
 
 Escape the terminal-based CLI and leverage all Claude Code features through an intuitive GUI.
+
+Native macOS desktop client for Claude Code.
 
 ![Platform](https://img.shields.io/badge/platform-macOS%2015.0%2B-blue)
 ![Swift](https://img.shields.io/badge/Swift-6.0-orange)

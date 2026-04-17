@@ -368,9 +368,8 @@ struct InputBarView: View {
     private var slashQuery: String {
         let text = windowState.inputText
         guard !text.contains(" ") else { return "" }
-        let trimmed = text.trimmingCharacters(in: .whitespaces)
-        guard trimmed.hasPrefix("/") else { return "" }
-        return trimmed
+        guard text.hasPrefix("/") else { return "" }
+        return text
     }
 
     private var slashFilteredCommands: [SlashCommand] {

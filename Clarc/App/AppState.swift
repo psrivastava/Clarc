@@ -1297,16 +1297,17 @@ final class AppState {
             }
         }
 
-        window.selectedProject = project
-        for (key, state) in sessionStates where !state.isStreaming {
-            sessionStates.removeValue(forKey: key)
+        // Batch all mutations into one transaction with animation disabled so SwiftUI
+        // renders the new session in the first frame (~16ms) without thrashing observers.
+        // Replacing the dictionary once avoids N @Observable notifications (one per removeValue).
+        withTransaction(Transaction(animation: nil)) {
+            window.selectedProject = project
+            sessionStates = sessionStates.filter { $0.value.isStreaming }
+            window.currentSessionId = nil
+            startNewChat(in: window)
         }
-        window.currentSessionId = nil
 
         UserDefaults.standard.set(project.id.uuidString, forKey: "selectedProjectId")
-
-        // Always start a new session on project switch — instant, no message loading
-        startNewChat(in: window)
 
         // Refresh session history in the background
         Task { [weak self] in
@@ -1347,20 +1348,7 @@ final class AppState {
         return parseGitHubOwnerRepo(from: urlString)
     }
 
-    private nonisolated func parseGitHubOwnerRepo(from urlString: String) -> String? {
-        if urlString.contains("github.com") {
-            let cleaned = urlString
-                .replacingOccurrences(of: "https://github.com/", with: "")
-                .replacingOccurrences(of: "http://github.com/", with: "")
-                .replacingOccurrences(of: "git@github.com:", with: "")
-                .replacingOccurrences(of: ".git", with: "")
-                .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-
-            let parts = cleaned.split(separator: "/")
-            if parts.count >= 2 { return "\(parts[0])/\(parts[1])" }
-        }
-        return nil
-    }
+    // parseGitHubOwnerRepo is in ClarcCore/Utilities/GitURLHelpers.swift
 
     private func addAndSelectProject(name: String, path: String, gitHubRepo: String? = nil, in window: WindowState) async {
         await addProject(name: name, path: path, gitHubRepo: gitHubRepo)

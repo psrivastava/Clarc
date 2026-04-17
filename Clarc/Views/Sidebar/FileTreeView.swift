@@ -8,11 +8,10 @@ struct FileTreeView: View {
     @Environment(AppState.self) private var appState
     @Environment(WindowState.self) private var windowState
     @State private var rootNode: FileNode?
-    @State private var isLoading = true
     @State private var isSearching = false
     @State private var searchText = ""
     @State private var showHiddenFiles = false
-    @State private var scanTask: Task<Void, Never>?
+    @State private var refreshTick = 0
     @FocusState private var isSearchFieldFocused: Bool
 
     /// Returns only files matching the search query as a flat list
@@ -62,7 +61,7 @@ struct FileTreeView: View {
                 .help(showHiddenFiles ? "Hide Hidden Files" : "Show Hidden Files")
 
                 Button {
-                    reload()
+                    refreshTick &+= 1
                 } label: {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 11))
@@ -113,18 +112,7 @@ struct FileTreeView: View {
 
             ClaudeThemeDivider()
 
-            if isLoading {
-                VStack(spacing: 8) {
-                    Spacer()
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Loading...")
-                        .font(.system(size: 12))
-                        .foregroundStyle(ClaudeTheme.textTertiary)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity)
-            } else if let root = rootNode {
+            if let root = rootNode {
                 if isSearching && !searchText.isEmpty {
                     // Search results: flat list
                     let results = filteredFiles
@@ -169,21 +157,33 @@ struct FileTreeView: View {
                     }
                 }
             } else {
+                // First load only — subsequent project switches keep the previous tree visible
+                // until the new scan completes (no flash).
                 VStack(spacing: 8) {
                     Spacer()
-                    Text("Unable to load files")
-                        .font(.system(size: 13))
-                        .foregroundStyle(ClaudeTheme.textSecondary)
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Loading...")
+                        .font(.system(size: 12))
+                        .foregroundStyle(ClaudeTheme.textTertiary)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
             }
         }
-        .onAppear { reload() }
-        .onChange(of: projectPath) { _, _ in reload() }
-        .onChange(of: showHiddenFiles) { _, _ in reload() }
+        // Single .task replaces onAppear + multiple onChange reload calls.
+        // SwiftUI auto-cancels the previous scan when the key changes.
+        .task(id: TreeScanKey(path: projectPath, hidden: showHiddenFiles, tick: refreshTick)) {
+            let path = projectPath
+            let hidden = showHiddenFiles
+            let node = await Task.detached(priority: .userInitiated) {
+                FileNode.scan(path: path, maxDepth: 4, showHiddenFiles: hidden)
+            }.value
+            guard !Task.isCancelled else { return }
+            rootNode = node
+        }
         .onChange(of: appState.isStreaming(in: windowState)) { old, new in
-            if old && !new { reload() }
+            if old && !new { refreshTick &+= 1 }
         }
         .onChange(of: searchTrigger) {
             withAnimation(.easeInOut(duration: 0.15)) {
@@ -211,18 +211,14 @@ struct FileTreeView: View {
         }
     }
 
-    private func reload() {
-        scanTask?.cancel()
-        isLoading = true
-        scanTask = Task.detached { [projectPath, showHiddenFiles] in
-            let node = FileNode.scan(path: projectPath, maxDepth: 4, showHiddenFiles: showHiddenFiles)
-            guard !Task.isCancelled else { return }
-            await MainActor.run {
-                rootNode = node
-                isLoading = false
-            }
-        }
-    }
+}
+
+// MARK: - Tree Scan Key
+
+private struct TreeScanKey: Equatable {
+    let path: String
+    let hidden: Bool
+    let tick: Int
 }
 
 // MARK: - File Node Row

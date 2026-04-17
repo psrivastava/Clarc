@@ -25,5 +25,10 @@ let package = Package(
                 .defaultIsolation(MainActor.self),
             ]
         ),
+        .testTarget(
+            name: "ClarcCoreTests",
+            dependencies: ["ClarcCore"],
+            path: "Tests/ClarcCoreTests"
+        ),
     ]
 )

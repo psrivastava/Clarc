@@ -29,8 +29,10 @@ struct SessionStreamState {
     var activeToolId: String?           // tool_use id currently receiving input_json_delta
     var activeToolInputBuffer: String = ""  // accumulator for input_json_delta
 
-    // Per-session model override (persisted in memory across session switches)
+    // Per-session overrides (persisted in memory across session switches)
     var model: String?
+    var effort: String?
+    var permissionMode: PermissionMode?
 
     // Session statistics
     var costUsd: Double = 0
@@ -113,8 +115,39 @@ final class AppState {
         return NSLocalizedString(key, comment: "")
     }
     static let availableEfforts = ["low", "medium", "high", "xhigh", "max"]
+
+    static func permissionModeDescription(_ mode: PermissionMode) -> String {
+        let key: String
+        switch mode {
+        case .default:           key = "perm.desc.default"
+        case .acceptEdits:       key = "perm.desc.acceptEdits"
+        case .plan:              key = "perm.desc.plan"
+        case .auto:              key = "perm.desc.auto"
+        case .bypassPermissions: key = "perm.desc.bypassPermissions"
+        }
+        return NSLocalizedString(key, comment: "")
+    }
+
+    static func effortDescription(_ effort: String) -> String {
+        let key: String
+        switch effort {
+        case "auto":   key = "effort.desc.auto"
+        case "low":    key = "effort.desc.low"
+        case "medium": key = "effort.desc.medium"
+        case "high":   key = "effort.desc.high"
+        case "xhigh":  key = "effort.desc.xhigh"
+        case "max":    key = "effort.desc.max"
+        default: return ""
+        }
+        return NSLocalizedString(key, comment: "")
+    }
+
     var selectedModel: String = UserDefaults.standard.string(forKey: "selectedModel") ?? "opus" {
         didSet { UserDefaults.standard.set(selectedModel, forKey: "selectedModel") }
+    }
+
+    var selectedEffort: String = UserDefaults.standard.string(forKey: "selectedEffort") ?? "auto" {
+        didSet { UserDefaults.standard.set(selectedEffort, forKey: "selectedEffort") }
     }
 
     // MARK: - Notifications
@@ -131,6 +164,20 @@ final class AppState {
         window.sessionModel = model
         let key = window.currentSessionId ?? window.newSessionKey
         updateState(key) { $0.model = model }
+    }
+
+    /// Sets the effort for the current session and persists it in the session state.
+    func setSessionEffort(_ effort: String?, in window: WindowState) {
+        window.sessionEffort = effort
+        let key = window.currentSessionId ?? window.newSessionKey
+        updateState(key) { $0.effort = effort }
+    }
+
+    /// Sets the permission mode for the current session and persists it in the session state.
+    func setSessionPermissionMode(_ mode: PermissionMode, in window: WindowState) {
+        window.sessionPermissionMode = mode
+        let key = window.currentSessionId ?? window.newSessionKey
+        updateState(key) { $0.permissionMode = mode }
     }
 
     func modelDisplayName(for model: String, in window: WindowState) -> String {
@@ -159,7 +206,9 @@ final class AppState {
 
     // MARK: - Permissions
 
-    var permissionMode: PermissionMode = .default
+    var permissionMode: PermissionMode = .default {
+        didSet { UserDefaults.standard.set(permissionMode.rawValue, forKey: "selectedPermissionMode") }
+    }
 
     // MARK: - GitHub
 
@@ -472,7 +521,7 @@ final class AppState {
         case "effort":
             if parts.count > 1 {
                 let arg = String(parts[1]).trimmingCharacters(in: .whitespaces).lowercased()
-                window.sessionEffort = Self.availableEfforts.contains(arg) ? arg : nil
+                setSessionEffort(Self.availableEfforts.contains(arg) ? arg : nil, in: window)
             } else {
                 window.showEffortPicker = true
             }
@@ -604,8 +653,13 @@ final class AppState {
             let tempId = "pending-\(streamId.uuidString)"
             window.currentSessionId = tempId
             window.insertPendingPlaceholder(tempId)
-            if let model = window.sessionModel {
-                updateState(tempId) { $0.model = model }
+            let snapModel = window.sessionModel
+            let snapEffort = window.sessionEffort
+            let snapPermission = window.sessionPermissionMode
+            updateState(tempId) { state in
+                state.model = snapModel
+                state.effort = snapEffort
+                state.permissionMode = snapPermission
             }
         }
 
@@ -633,8 +687,9 @@ final class AppState {
         }
         await permission.refreshRunToken()
 
+        let currentPermissionMode = window.sessionPermissionMode ?? permissionMode
         var hookSettingsPath: String?
-        if !permissionMode.skipsHookPipeline {
+        if !currentPermissionMode.skipsHookPipeline {
             do {
                 hookSettingsPath = try await permission.writeHookSettingsFile()
             } catch {
@@ -650,7 +705,6 @@ final class AppState {
             await saveCurrentSession(in: window)
         }
 
-        let currentPermissionMode = permissionMode
         let task = Task { [weak self, window] in
             guard let self else { return }
             await self.processStream(
@@ -660,7 +714,7 @@ final class AppState {
                 cliSessionId: cliSessionId,
                 internalSessionKey: sessionKey,
                 model: window.sessionModel ?? self.selectedModel,
-                effort: window.sessionEffort,
+                effort: window.sessionEffort ?? (self.selectedEffort == "auto" ? nil : self.selectedEffort),
                 hookSettingsPath: hookSettingsPath,
                 permissionMode: currentPermissionMode,
                 projectId: project.id,
@@ -1297,10 +1351,9 @@ final class AppState {
             }
         }
 
-        // Batch all mutations into one transaction with animation disabled so SwiftUI
-        // renders the new session in the first frame (~16ms) without thrashing observers.
-        // Replacing the dictionary once avoids N @Observable notifications (one per removeValue).
-        withTransaction(Transaction(animation: nil)) {
+        // animation: nil — all mutations land in the same frame; sessionStates.filter fires
+        // one @Observable notification instead of N removeValue calls.
+        withAnimation(nil) {
             window.selectedProject = project
             sessionStates = sessionStates.filter { $0.value.isStreaming }
             window.currentSessionId = nil
@@ -1348,8 +1401,6 @@ final class AppState {
         return parseGitHubOwnerRepo(from: urlString)
     }
 
-    // parseGitHubOwnerRepo is in ClarcCore/Utilities/GitURLHelpers.swift
-
     private func addAndSelectProject(name: String, path: String, gitHubRepo: String? = nil, in window: WindowState) async {
         await addProject(name: name, path: path, gitHubRepo: gitHubRepo)
         if let project = projects.last {
@@ -1381,6 +1432,8 @@ final class AppState {
         if sessionStates[session.id] == nil {
             var state = SessionStreamState()
             state.model = session.model
+            state.effort = session.effort
+            state.permissionMode = session.permissionMode
             if let msgs = loadedMessages {
                 state.messages = cleanLoadedMessages(msgs)
                 sessionStates[session.id] = state
@@ -1394,9 +1447,11 @@ final class AppState {
         } else if sessionStates[session.id]?.messages.isEmpty == true,
                   sessionStates[session.id]?.isStreaming != true,
                   let project = window.selectedProject {
-            // Restore model from disk if not already set in memory
-            if sessionStates[session.id]?.model == nil {
-                sessionStates[session.id]?.model = session.model
+            if var state = sessionStates[session.id] {
+                if state.model == nil { state.model = session.model }
+                if state.effort == nil { state.effort = session.effort }
+                if state.permissionMode == nil { state.permissionMode = session.permissionMode }
+                sessionStates[session.id] = state
             }
             loadMessagesInBackground(projectId: project.id, sessionId: session.id)
         }
@@ -1407,6 +1462,8 @@ final class AppState {
 
         window.currentSessionId = session.id
         window.sessionModel = sessionStates[session.id]?.model ?? session.model
+        window.sessionEffort = sessionStates[session.id]?.effort ?? session.effort
+        window.sessionPermissionMode = sessionStates[session.id]?.permissionMode ?? session.permissionMode
         window.inputText = window.draftTexts[session.id] ?? ""
         window.messageQueue = window.draftQueues[session.id] ?? []
 
@@ -1513,6 +1570,8 @@ final class AppState {
         releaseOutgoingSession(window.currentSessionId, in: window)
         window.currentSessionId = nil
         window.sessionModel = nil
+        window.sessionEffort = nil
+        window.sessionPermissionMode = nil
         sessionStates.removeValue(forKey: window.newSessionKey)
         window.inputText = window.draftTexts["new"] ?? ""
         window.messageQueue = window.draftQueues["new"] ?? []
@@ -1747,6 +1806,8 @@ final class AppState {
                 guard !state.isStreaming, state.messages.isEmpty else { return }
                 state.messages = cleaned
                 if state.model == nil { state.model = full.model }
+                if state.effort == nil { state.effort = full.effort }
+                if state.permissionMode == nil { state.permissionMode = full.permissionMode }
                 self.sessionStates[sessionId] = state
             }
         }
@@ -1776,7 +1837,9 @@ final class AppState {
         }
 
         let sessionModel = sessionStates[sessionId]?.model
-        let session = ChatSession(id: sessionId, projectId: projectId, title: title, messages: messages, updatedAt: lastResponseDate(from: messages), model: sessionModel)
+        let sessionEffort = sessionStates[sessionId]?.effort
+        let sessionPermissionMode = sessionStates[sessionId]?.permissionMode
+        let session = ChatSession(id: sessionId, projectId: projectId, title: title, messages: messages, updatedAt: lastResponseDate(from: messages), model: sessionModel, effort: sessionEffort, permissionMode: sessionPermissionMode)
 
         do {
             try await persistence.saveSession(session)
@@ -1853,14 +1916,15 @@ final class AppState {
 
         await permission.refreshRunToken()
 
+        let currentPermissionMode = sessionStates[sessionKey]?.permissionMode ?? permissionMode
         var hookSettingsPath: String?
-        if !permissionMode.skipsHookPipeline {
+        if !currentPermissionMode.skipsHookPipeline {
             do { hookSettingsPath = try await permission.writeHookSettingsFile() }
             catch { logger.error("Failed to write hook settings for background queue: \(error.localizedDescription)") }
         }
 
-        let currentPermissionMode = permissionMode
         let model = sessionStates[sessionKey]?.model ?? selectedModel
+        let effort = sessionStates[sessionKey]?.effort ?? (selectedEffort == "auto" ? nil : selectedEffort)
         let task = Task { [weak self, window] in
             guard let self else { return }
             await self.processStream(
@@ -1870,6 +1934,7 @@ final class AppState {
                 cliSessionId: sessionKey,
                 internalSessionKey: sessionKey,
                 model: model,
+                effort: effort,
                 hookSettingsPath: hookSettingsPath,
                 permissionMode: currentPermissionMode,
                 projectId: projectId,
@@ -1896,13 +1961,18 @@ final class AppState {
     private nonisolated static func readPermissionModeFromSettings() -> PermissionMode {
         let url = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".claude/settings.json")
-        guard let data = try? Data(contentsOf: url),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let permissions = json["permissions"] as? [String: Any],
-              let mode = permissions["defaultMode"] as? String,
-              let parsed = PermissionMode(rawValue: mode)
-        else { return .default }
-        return parsed
+        if let data = try? Data(contentsOf: url),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let permissions = json["permissions"] as? [String: Any],
+           let mode = permissions["defaultMode"] as? String,
+           let parsed = PermissionMode(rawValue: mode) {
+            return parsed
+        }
+        if let saved = UserDefaults.standard.string(forKey: "selectedPermissionMode"),
+           let parsed = PermissionMode(rawValue: saved) {
+            return parsed
+        }
+        return .default
     }
 }
 

@@ -103,7 +103,8 @@ struct GitStatusView: View {
             stopWatchingHEAD()
         }
         .onChange(of: projectPath) { _, _ in
-            // Defer the watcher restart so the open() syscall doesn't block the first frame
+            // Enqueue stop/start on the next run loop tick — keeps the watcher lifecycle
+            // out of the selectProject first-frame critical path.
             Task { @MainActor in
                 stopWatchingHEAD()
                 startWatchingHEAD()
@@ -112,8 +113,6 @@ struct GitStatusView: View {
         .onChange(of: appState.isStreaming(in: windowState)) { old, new in
             if old && !new { refresh() }
         }
-        // Replaces onAppear refresh + onChange refresh: auto-cancels previous task when
-        // projectPath changes so we never show a stale result from the old path.
         .task(id: projectPath) {
             let path = projectPath
             let fresh = await fetchGitStatus(at: path)
@@ -267,7 +266,6 @@ struct GitStatusView: View {
         refreshTask?.cancel()
         let path = projectPath
         refreshTask = Task {
-            // Keep previous state visible until the new result arrives (no loading flash)
             let fresh = await fetchGitStatus(at: path)
             guard !Task.isCancelled else { return }
             gitStatus = fresh
@@ -309,26 +307,10 @@ private func fetchGitStatus(at path: String) async -> GitStatusInfo {
         return .clean(branch: branch)
     }
 
-    let lines = statusRaw.components(separatedBy: "\n").filter { !$0.isEmpty }
-    var modified = 0
-    var added = 0
-    var deleted = 0
-
-    for line in lines {
-        guard line.count >= 2 else { continue }
-        let index = line.index(line.startIndex, offsetBy: 1)
-        let statusChar = line[index]
-        switch statusChar {
-        case "M": modified += 1
-        case "A", "?": added += 1
-        case "D": deleted += 1
-        default: modified += 1
-        }
-    }
-
+    let counts = parseGitStatusPorcelain(statusRaw)
     return .dirty(
         branch: branch,
-        changes: .init(modified: modified, added: added, deleted: deleted)
+        changes: .init(modified: counts.modified, added: counts.added, deleted: counts.deleted)
     )
 }
 

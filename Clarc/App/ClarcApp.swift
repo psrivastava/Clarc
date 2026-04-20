@@ -107,7 +107,7 @@ struct SettingsWindowRoot: View {
     @State private var windowState = WindowState()
 
     var body: some View {
-        SettingsView(projectName: "")
+        SettingsView()
             .environment(appState)
             .environment(windowState)
     }

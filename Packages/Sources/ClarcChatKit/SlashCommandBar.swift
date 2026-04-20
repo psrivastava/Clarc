@@ -54,18 +54,8 @@ extension CustomCommandStore {
 
 @MainActor
 public enum SlashCommandRegistry {
-    private static var currentProjectPath: String?
     public static var store: CustomCommandStore = Self.loadStore()
     private static var _cachedCommands: [SlashCommand]?
-
-    // MARK: - Project Binding
-
-    public static func bind(to projectPath: String?) {
-        guard currentProjectPath != projectPath else { return }
-        currentProjectPath = projectPath
-        store = loadStore()
-        invalidateCache()
-    }
 
     public static var commands: [SlashCommand] {
         if let cached = _cachedCommands { return cached }
@@ -187,19 +177,9 @@ public enum SlashCommandRegistry {
 
     private static var storeURL: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let clarcDir = appSupport.appendingPathComponent("Clarc")
-
-        if let projectPath = currentProjectPath {
-            let safeName = projectPath
-                .replacingOccurrences(of: "/", with: "_")
-                .trimmingCharacters(in: CharacterSet(charactersIn: "_"))
-            return clarcDir
-                .appendingPathComponent("projects")
-                .appendingPathComponent(safeName)
-                .appendingPathComponent("custom_commands.json")
-        } else {
-            return clarcDir.appendingPathComponent("custom_commands.json")
-        }
+        return appSupport
+            .appendingPathComponent("Clarc")
+            .appendingPathComponent("custom_commands.json")
     }
 
     private static func loadStore() -> CustomCommandStore {
@@ -563,7 +543,6 @@ struct CommandDetailSheet: View {
 
 struct CommandMenuButton: View {
     let messages: [ChatMessage]
-    @Environment(WindowState.self) private var windowState
     @State private var isCopied = false
     @State private var showUsagePopover = false
     @State private var showCommandManager = false
@@ -600,8 +579,7 @@ struct CommandMenuButton: View {
         .help("Commands")
         .popover(isPresented: $showUsagePopover, arrowEdge: .top) { UsagePopoverView() }
         .sheet(isPresented: $showCommandManager) {
-            SlashCommandManagerView(projectName: windowState.selectedProject?.name ?? "")
-                .onDisappear { windowState.registryVersion += 1 }
+            SlashCommandManagerView()
         }
     }
 

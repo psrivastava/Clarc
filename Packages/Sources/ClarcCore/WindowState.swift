@@ -96,7 +96,6 @@ public final class WindowState {
     /// Cleared when a new chat is started or a different session is selected.
     public var sessionPermissionMode: PermissionMode?
     public var requestInputFocus = false
-    public var registryVersion = 0
     public var isInitialized = false
     public var errorMessage: String?
     public var showError = false

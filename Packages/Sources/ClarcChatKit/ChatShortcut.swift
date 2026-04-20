@@ -32,20 +32,11 @@ public struct ChatShortcut: Identifiable, Codable, Hashable {
     }
 }
 
-// MARK: - Chat Shortcut Registry (Per-Project)
+// MARK: - Chat Shortcut Registry
 
 @MainActor
 public enum ChatShortcutRegistry {
-    private static var currentProjectPath: String?
-    private static var shortcuts: [ChatShortcut] = []
-
-    // MARK: - Project Binding
-
-    public static func bind(to projectPath: String?) {
-        guard currentProjectPath != projectPath else { return }
-        currentProjectPath = projectPath
-        shortcuts = loadShortcuts(for: projectPath)
-    }
+    private static var shortcuts: [ChatShortcut] = loadShortcuts()
 
     public static var currentShortcuts: [ChatShortcut] {
         shortcuts
@@ -71,33 +62,22 @@ public enum ChatShortcutRegistry {
 
     // MARK: - Persistence
 
-    private static func storeURL(for projectPath: String?) -> URL {
+    private static var storeURL: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let clarcDir = appSupport.appendingPathComponent("Clarc")
-
-        if let projectPath {
-            let safeName = projectPath
-                .replacingOccurrences(of: "/", with: "_")
-                .trimmingCharacters(in: CharacterSet(charactersIn: "_"))
-            return clarcDir
-                .appendingPathComponent("projects")
-                .appendingPathComponent(safeName)
-                .appendingPathComponent("shortcuts.json")
-        } else {
-            return clarcDir.appendingPathComponent("shortcuts_global.json")
-        }
+        return appSupport
+            .appendingPathComponent("Clarc")
+            .appendingPathComponent("shortcuts.json")
     }
 
-    private static func loadShortcuts(for projectPath: String?) -> [ChatShortcut] {
-        let url = storeURL(for: projectPath)
-        guard let data = try? Data(contentsOf: url),
+    private static func loadShortcuts() -> [ChatShortcut] {
+        guard let data = try? Data(contentsOf: storeURL),
               let decoded = try? JSONDecoder().decode([ChatShortcut].self, from: data)
         else { return [] }
         return decoded
     }
 
     private static func save() {
-        let url = storeURL(for: currentProjectPath)
+        let url = storeURL
         do {
             let dir = url.deletingLastPathComponent()
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

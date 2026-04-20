@@ -13,11 +13,9 @@ public struct ShortcutManagerView: View {
     @State private var importSuccess = false
     @State private var shortcutList: [ChatShortcut] = ChatShortcutRegistry.currentShortcuts
 
-    public let projectName: String
     public var isEmbedded: Bool = false
 
-    public init(projectName: String, isEmbedded: Bool = false) {
-        self.projectName = projectName
+    public init(isEmbedded: Bool = false) {
         self.isEmbedded = isEmbedded
     }
 
@@ -69,17 +67,9 @@ public struct ShortcutManagerView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Shortcut Manager", bundle: .module)
                     .font(.system(size: 15, weight: .semibold))
-                HStack(spacing: 4) {
-                    Image(systemName: "folder.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color.accentColor)
-                    Text(projectName)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                    Text("· \(shortcutList.count)")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
+                Text(String(format: String(localized: "%lld shortcuts", bundle: .module), shortcutList.count))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()

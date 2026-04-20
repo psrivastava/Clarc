@@ -6,9 +6,6 @@ import ClarcChatKit
 
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
-    @Environment(WindowState.self) private var windowState
-
-    let projectName: String
 
     @State private var selectedTab = 0
     @State private var showUserManual = false
@@ -27,13 +24,13 @@ struct SettingsView: View {
                 }
                 .tag(1)
 
-            SlashCommandManagerView(projectName: projectName, isEmbedded: true)
+            SlashCommandManagerView(isEmbedded: true)
                 .tabItem {
                     Label("Slash Commands", systemImage: "terminal.fill")
                 }
                 .tag(2)
 
-            ShortcutManagerView(projectName: projectName, isEmbedded: true)
+            ShortcutManagerView(isEmbedded: true)
                 .tabItem {
                     Label("Shortcuts", systemImage: "bolt.fill")
                 }
@@ -46,9 +43,6 @@ struct SettingsView: View {
             guard let window = notification.object as? NSWindow,
                   window.title == "Settings" else { return }
             selectedTab = 0
-        }
-        .onDisappear {
-            windowState.registryVersion += 1
         }
         .sheet(isPresented: $showUserManual) {
             UserManualView()
@@ -431,7 +425,7 @@ private struct ThemePickerRow: View {
 }
 
 #Preview {
-    SettingsView(projectName: "MyProject")
+    SettingsView()
         .environment(AppState())
         .environment(WindowState())
 }

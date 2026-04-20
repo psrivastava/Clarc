@@ -5,13 +5,13 @@ import ClarcCore
 public struct ChatView: View {
     @Environment(WindowState.self) private var windowState
     @Environment(ChatBridge.self) private var chatBridge
-    @State private var projectShortcuts: [ChatShortcut] = []
+    @State private var shortcuts: [ChatShortcut] = []
 
     public init() {}
 
     public var body: some View {
         VStack(spacing: 0) {
-            if windowState.selectedProject != nil && !projectShortcuts.isEmpty {
+            if windowState.selectedProject != nil && !shortcuts.isEmpty {
                 shortcutBar
             }
 
@@ -31,17 +31,11 @@ public struct ChatView: View {
             Task { await chatBridge.cancelStreaming() }
             return .handled
         }
-        .onChange(of: windowState.selectedProject?.path) { _, _ in
-            reloadShortcuts()
-        }
-        .onChange(of: windowState.registryVersion) { _, _ in
-            reloadShortcuts()
-        }
         .onReceive(NotificationCenter.default.publisher(for: .chatShortcutsDidChange)) { _ in
-            reloadShortcuts()
+            shortcuts = ChatShortcutRegistry.currentShortcuts
         }
         .onAppear {
-            reloadShortcuts()
+            shortcuts = ChatShortcutRegistry.currentShortcuts
         }
     }
 
@@ -50,7 +44,7 @@ public struct ChatView: View {
     private var shortcutBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(projectShortcuts) { shortcut in
+                ForEach(shortcuts) { shortcut in
                     Button {
                         executeShortcut(shortcut)
                     } label: {
@@ -85,13 +79,6 @@ public struct ChatView: View {
             windowState.inputText = shortcut.message
             Task { await chatBridge.send() }
         }
-    }
-
-    private func reloadShortcuts() {
-        let path = windowState.selectedProject?.path
-        ChatShortcutRegistry.bind(to: path)
-        SlashCommandRegistry.bind(to: path)
-        projectShortcuts = ChatShortcutRegistry.currentShortcuts
     }
 
     // MARK: - Messages

@@ -15,11 +15,9 @@ public struct SlashCommandManagerView: View {
     @State private var importSuccess = false
     @State private var commandList: [SlashCommand] = SlashCommandRegistry.commands
 
-    public var projectName: String = ""
     public var isEmbedded: Bool = false
 
-    public init(projectName: String = "", isEmbedded: Bool = false) {
-        self.projectName = projectName
+    public init(isEmbedded: Bool = false) {
         self.isEmbedded = isEmbedded
     }
 
@@ -90,22 +88,9 @@ public struct SlashCommandManagerView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Slash Command Manager", bundle: .module)
                     .font(.system(size: 15, weight: .semibold))
-                HStack(spacing: 4) {
-                    if !projectName.isEmpty {
-                        Image(systemName: "folder.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(Color.accentColor)
-                        Text(projectName)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                        Text("·")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    }
-                    Text(String(format: String(localized: "%lld commands", bundle: .module), commandList.count))
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
+                Text(String(format: String(localized: "%lld commands", bundle: .module), commandList.count))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()

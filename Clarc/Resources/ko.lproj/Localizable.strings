@@ -10,7 +10,7 @@
 "Message" = "메시지";
 "Focus Mode" = "집중 모드";
 "Enable Focus Mode" = "집중 모드 활성화";
-"focus.mode.desc" = "완료된 응답만 표시합니다. 스트리밍 중인 메시지는 생성이 완료된 후에 나타납니다.";
+"focus.mode.desc" = "스트리밍 중 메시지 버블을 숨기고, 완료된 응답만 히스토리에 표시합니다.";
 "Shortcuts" = "단축키";
 "Browse and manage Claude Code skills" = "Claude Code 스킬을 탐색하고 관리하세요";
 "Default Model" = "기본 모델";

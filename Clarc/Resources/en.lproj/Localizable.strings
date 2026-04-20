@@ -10,7 +10,7 @@
 "Message" = "Message";
 "Focus Mode" = "Focus Mode";
 "Enable Focus Mode" = "Enable Focus Mode";
-"focus.mode.desc" = "Show only completed responses. Streaming messages are hidden until fully generated.";
+"focus.mode.desc" = "Hide streaming bubbles and show only completed responses in history.";
 "Shortcuts" = "Shortcuts";
 "Browse and manage Claude Code skills" = "Browse and manage Claude Code skills";
 "Default Model" = "Default Model";

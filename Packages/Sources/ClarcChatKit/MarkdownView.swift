@@ -633,9 +633,10 @@ struct CodeBlockView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(SyntaxHighlighter.highlight(code, language: language, fontSize: 14))
                     .textSelection(.enabled)
+                    .fixedSize()
                     .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(ClaudeTheme.codeBackground)
         .clipShape(RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusSmall))

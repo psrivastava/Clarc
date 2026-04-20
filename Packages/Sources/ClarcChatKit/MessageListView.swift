@@ -171,12 +171,19 @@ struct MessageListView: View {
 
     /// If streaming, returns only completed messages excluding the last consecutive (non-error) assistant sequence.
     /// If not streaming, returns all messages without the streaming flag.
+    /// In focus mode, further filters to only user messages and completed assistant responses.
     private func settledOnlyMessages(from messages: [ChatMessage]) -> [ChatMessage] {
-        guard messages.last?.isStreaming == true else {
-            return messages.filter { !$0.isStreaming }
+        var settled: [ChatMessage]
+        if messages.last?.isStreaming == true {
+            let boundary = streamingBoundaryIndex(in: messages)
+            settled = Array(messages[..<boundary]).filter { !$0.isStreaming }
+        } else {
+            settled = messages.filter { !$0.isStreaming }
         }
-        let boundary = streamingBoundaryIndex(in: messages)
-        return Array(messages[..<boundary]).filter { !$0.isStreaming }
+        if windowState.focusMode {
+            settled = settled.filter { $0.role == .user || $0.isResponseComplete || $0.isCompactBoundary }
+        }
+        return settled
     }
 
     private func scrollToBottomDebounced() {

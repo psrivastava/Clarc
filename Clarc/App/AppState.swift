@@ -344,6 +344,12 @@ final class AppState {
         }
 
         projects = await persistence.loadProjects()
+        var seenPaths = Set<String>()
+        let deduplicated = projects.filter { seenPaths.insert($0.path).inserted }
+        if deduplicated.count != projects.count {
+            projects = deduplicated
+            try? await persistence.saveProjects(projects)
+        }
 
         if let cachedUser = await persistence.loadGitHubUser() {
             gitHubUser = cachedUser
@@ -1397,6 +1403,7 @@ final class AppState {
     // MARK: - Project Management
 
     func addProject(name: String, path: String, gitHubRepo: String?) async {
+        guard !projects.contains(where: { $0.path == path }) else { return }
         let project = Project(name: name, path: path, gitHubRepo: gitHubRepo)
         projects.append(project)
         do {
@@ -1476,6 +1483,10 @@ final class AppState {
     }
 
     private func addAndSelectProject(name: String, path: String, gitHubRepo: String? = nil, in window: WindowState) async {
+        if let existing = projects.first(where: { $0.path == path }) {
+            selectProject(existing, in: window)
+            return
+        }
         await addProject(name: name, path: path, gitHubRepo: gitHubRepo)
         if let project = projects.last {
             selectProject(project, in: window)
@@ -1790,6 +1801,7 @@ final class AppState {
     }
 
     func addProject(_ project: Project) {
+        guard !projects.contains(where: { $0.path == project.path }) else { return }
         projects.append(project)
         Task {
             do { try await persistence.saveProjects(projects) }

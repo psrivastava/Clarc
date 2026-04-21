@@ -405,14 +405,12 @@ struct InputBarView: View {
             let range = editor.selectedRange
             if range.location != NSNotFound {
                 windowState.inputText = (current as NSString).replacingCharacters(in: range, with: text)
-                textFieldLayoutID += 1
-                DispatchQueue.main.async { isInputFocused = true }
+                resetIMEState()
                 return
             }
         }
         windowState.inputText = current + text
-        textFieldLayoutID += 1
-        DispatchQueue.main.async { isInputFocused = true }
+        resetIMEState()
     }
 
     private func imageAttachmentFromPasteboard(_ pb: NSPasteboard) -> Attachment? {
@@ -430,6 +428,12 @@ struct InputBarView: View {
         return nil
     }
 
+    // Recreate the text field to reset IME state; prevents ghost Hangul leaking into the next input.
+    private func resetIMEState() {
+        textFieldLayoutID += 1
+        DispatchQueue.main.async { isInputFocused = true }
+    }
+
     private func handleEscapeKey() -> KeyPress.Result {
         if showAtFilePopup {
             withAnimation(.easeOut(duration: 0.15)) { showAtFilePopup = false }
@@ -442,8 +446,7 @@ struct InputBarView: View {
         if chatBridge.isStreaming {
             // Without this the last composing Hangul character leaks into the next input as a ghost prefix.
             NSTextInputContext.current?.client.unmarkText()
-            textFieldLayoutID += 1
-            DispatchQueue.main.async { isInputFocused = true }
+            resetIMEState()
             Task { await chatBridge.cancelStreaming() }
             return .handled
         }
@@ -597,10 +600,12 @@ struct InputBarView: View {
             }
             windowState.inputText = ""
             windowState.attachments = []
+            resetIMEState()
             return
         }
 
         Task { await chatBridge.send() }
+        resetIMEState()
     }
 
     private func processNextQueued() {

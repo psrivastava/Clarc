@@ -471,15 +471,27 @@ private func parseInlineMarkdown(_ content: String) -> AttributedString {
     ) else {
         return AttributedString(content)
     }
-    // Apply base font first — so subsequent code spans can override it
-    result.font = .system(size: 15)
-    // Inline code spans: monospace font + background color + thin spaces for padding
+    // Apply base font per-run to preserve bold/italic emphasis from markdown parsing
     var codeRanges: [Range<AttributedString.Index>] = []
     for run in result.runs {
-        if let intent = run.inlinePresentationIntent, intent.contains(.code) {
+        guard let intent = run.inlinePresentationIntent else {
+            result[run.range].font = .system(size: 15)
+            continue
+        }
+        if intent.contains(.code) {
             codeRanges.append(run.range)
+        } else {
+            let isBold = intent.contains(.stronglyEmphasized)
+            let isItalic = intent.contains(.emphasized)
+            switch (isBold, isItalic) {
+            case (true, true):  result[run.range].font = .system(size: 15, weight: .bold).italic()
+            case (true, false): result[run.range].font = .system(size: 15, weight: .bold)
+            case (false, true): result[run.range].font = .system(size: 15).italic()
+            default:            result[run.range].font = .system(size: 15)
+            }
         }
     }
+    // Inline code spans: monospace font + background color
     for range in codeRanges.reversed() {
         result[range].font = .system(size: 14, design: .monospaced)
         result[range].foregroundColor = ClaudeTheme.textPrimary

@@ -123,7 +123,7 @@
 
 // MARK: - ToolResultView
 "Show less" = "접기";
-"Show %lld more lines" = "%lld줄 더 보기";
+"Show more" = "더 보기";
 "Error occurred" = "오류 발생";
 "Completed" = "완료됨";
 "Running" = "실행 중";

@@ -203,7 +203,7 @@ struct ToolResultView: View {
                             if isDiffExpanded {
                                 Text("Show less", bundle: .module)
                             } else {
-                                Text(String(format: String(localized: "Show %lld more lines", bundle: .module), allLines.count - collapseThreshold))
+                                Text("Show more", bundle: .module)
                             }
                         }
                         .font(.system(size: 12, weight: .medium))

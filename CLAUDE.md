@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Fork Info
+
+This is a personal fork of [ttnear/Clarc](https://github.com/ttnear/Clarc).
+
+- **Working branch:** `psrivastava` — all commits go here
+- **`main` branch:** tracks `upstream/main` only — never commit directly
+- **origin:** `github.com/psrivastava/Clarc`
+- **upstream:** `github.com/ttnear/Clarc`
+
+To sync: `git checkout main && git pull upstream main && git checkout psrivastava && git rebase main`
+
 ## Project Overview
 
 Clarc is a native macOS desktop client for the Claude Code CLI. Written in Swift + SwiftUI with two external dependencies: SwiftTerm (terminal emulation) and Sparkle (auto-update).
@@ -13,6 +24,9 @@ Clarc is a native macOS desktop client for the Claude Code CLI. Written in Swift
 ## Build & Run
 
 ```bash
+# Quick build (fork convenience script)
+./build.sh
+
 # Open in Xcode (build/run with Cmd+R)
 open Clarc.xcodeproj
 

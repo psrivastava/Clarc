@@ -10,6 +10,10 @@ Native macOS desktop client for Claude Code.
 ![Swift](https://img.shields.io/badge/Swift-6.0-orange)
 ![License](https://img.shields.io/badge/license-Apache%202.0-green)
 
+> **Fork note:** This is a personal fork of [ttnear/Clarc](https://github.com/ttnear/Clarc).
+> All custom work lives on the **`psrivastava`** branch.
+> The `main` branch tracks upstream and should not be committed to directly.
+
 ---
 
 ## Screenshots
@@ -46,6 +50,14 @@ Native macOS desktop client for Claude Code.
 | **User Guide** | Built-in in-app help guide accessible from the toolbar |
 | **Auto-update** | Sparkle-based automatic update checking |
 
+### Fork Additions (`psrivastava` branch)
+
+| Feature | Description |
+|---------|-------------|
+| **Terminal Font Settings** | Font family picker (Menlo, SF Mono, Monaco, Courier New, Andale Mono) with size stepper and live preview in Settings → Terminal |
+| **Terminal Color Themes** | 6 color schemes: Default, Solarized Dark, Solarized Light, Dracula, Nord, Monokai — full ANSI 16-color palettes |
+| **Claude Code Session Import** | Auto-imports Claude Code CLI sessions from `~/.claude/projects/` on startup and project switch, with titles from `~/.claude/history.jsonl` |
+
 ---
 
 ## Requirements
@@ -74,6 +86,34 @@ When you see **"Apple could not verify 'Clarc.app' is free of malware..."**:
 4. Confirm with your password or Touch ID.
 
 After this one-time approval, Clarc launches normally. The app is signed with a Developer ID certificate and notarized by Apple — this prompt is standard macOS behavior, not a security warning specific to Clarc.
+
+---
+
+## Development (Fork Workflow)
+
+This fork uses a two-branch strategy:
+
+| Branch | Purpose |
+|--------|---------|
+| `main` | Tracks `upstream/main` (ttnear/Clarc). **Do not commit here.** |
+| `psrivastava` | All custom features and fixes. This is the working branch. |
+
+```bash
+# Pull upstream changes
+git checkout main
+git pull upstream main
+
+# Rebase custom work onto latest upstream
+git checkout psrivastava
+git rebase main
+
+# Build
+./build.sh
+```
+
+Remotes:
+- `origin` → `github.com/psrivastava/Clarc` (this fork)
+- `upstream` → `github.com/ttnear/Clarc` (source)
 
 ---
 

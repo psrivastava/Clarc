@@ -54,9 +54,16 @@ Native macOS desktop client for Claude Code.
 
 | Feature | Description |
 |---------|-------------|
-| **Terminal Font Settings** | Font family picker (Menlo, SF Mono, Monaco, Courier New, Andale Mono) with size stepper and live preview in Settings → Terminal |
-| **Terminal Color Themes** | 6 color schemes: Default, Solarized Dark, Solarized Light, Dracula, Nord, Monokai — full ANSI 16-color palettes |
-| **Claude Code Session Import** | Auto-imports Claude Code CLI sessions from `~/.claude/projects/` on startup and project switch, with titles from `~/.claude/history.jsonl` |
+| **Terminal Font Settings** | Font family picker (MesloLGS NF, Menlo, SF Mono, Monaco, Courier New, Andale Mono) filtered to installed fonts, with size stepper and live preview in Settings → Terminal |
+| **Terminal Color Themes** | 6 ANSI 16-color schemes: Default, Solarized Dark, Solarized Light, Dracula, Nord, Monokai — applied to both inspector and popup terminals |
+| **Claude Code CLI Sessions** | Dedicated CLI sidebar tab that reads sessions directly from `~/.claude/projects/`, grouped by project with titles from `~/.claude/history.jsonl`. Right-click to resume, copy ID, or delete |
+| **Session Auto-Import** | On startup and project switch, imports CLI sessions into Clarc history. Auto-creates Clarc projects for CLI-only project directories |
+| **Sidebar Tab Management** | Configurable visible tabs (History, CLI, Files) in Settings → General. Tabs auto-appear on use (e.g. Files when a project is selected). Right-click tabs to Close, Close Others, or Restore All |
+| **Default Sidebar Tab** | Choose which tab opens by default (History or CLI) in Settings → General |
+| **Closeable Project Tabs** | Right-click project tabs to Close Tab or Close Other Tabs. Closed projects stay in the project list but are hidden from the tab bar |
+| **Add Project Menu** | Unified `+` menu in toolbar with "Add Project Folder" and "Clone from GitHub" options |
+| **Keyboard Shortcuts** | ⌘1 History, ⌘2 CLI, ⌘3 Files sidebar tab switching |
+| **Build Script** | `./build.sh` for one-command clean build. `./build.sh --deploy` to also install to `/Applications` and launch with checksum verification |
 
 ---
 
@@ -107,8 +114,11 @@ git pull upstream main
 git checkout psrivastava
 git rebase main
 
-# Build
+# Build only
 ./build.sh
+
+# Build + deploy to /Applications + launch
+./build.sh --deploy
 ```
 
 Remotes:

@@ -72,12 +72,19 @@ struct ProjectWindowView: View {
 
     // MARK: - Sidebar
 
+    private var visibleTabs: [MainView.SidebarTab] {
+        appState.activeSidebarTabs(hasProject: windowState.selectedProject != nil)
+            .compactMap { MainView.SidebarTab(rawValue: AppState.sidebarTabKeyToRawValue[$0] ?? $0) }
+    }
+
     private var sidebarContent: some View {
         VStack(spacing: 0) {
-            // Sidebar tabs (History/Files)
-            ClaudeSegmentedControl(selection: $sidebarTab)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+            let tabs = visibleTabs
+            if tabs.count > 1 {
+                ClaudeSegmentedControl(selection: $sidebarTab, tabs: tabs)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+            }
 
             ClaudeThemeDivider()
 
@@ -88,6 +95,8 @@ struct ProjectWindowView: View {
                 }
             case .history:
                 HistoryListView()
+            case .cli:
+                CLISessionsView()
             }
 
             SidebarTabShortcuts(sidebarTab: $sidebarTab, fileSearchTrigger: $fileSearchTrigger, columnVisibility: $columnVisibility)

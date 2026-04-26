@@ -59,6 +59,13 @@ final class AppState {
 
     var projects: [Project] = []
 
+    /// Projects currently visible as tabs. Subset of projects[].id.
+    var openProjectIds: Set<UUID> = [] {
+        didSet {
+            UserDefaults.standard.set(Array(openProjectIds.map(\.uuidString)), forKey: "openProjectIds")
+        }
+    }
+
     // MARK: - Per-Session State (shared — managed independently by session ID regardless of window)
 
     /// Independent state for all active sessions. Key: sessionId
@@ -172,18 +179,53 @@ final class AppState {
         didSet { UserDefaults.standard.set(terminalFontSize, forKey: "terminalFontSize") }
     }
 
+    var defaultSidebarTab: String = UserDefaults.standard.string(forKey: "defaultSidebarTab") ?? "history" {
+        didSet { UserDefaults.standard.set(defaultSidebarTab, forKey: "defaultSidebarTab") }
+    }
+
+    var visibleSidebarTabs: [String] = (UserDefaults.standard.array(forKey: "visibleSidebarTabs") as? [String]) ?? ["history"] {
+        didSet { UserDefaults.standard.set(visibleSidebarTabs, forKey: "visibleSidebarTabs") }
+    }
+
+    /// Ensures a sidebar tab is visible (called when opening/resuming a session adds context)
+    func ensureSidebarTab(_ tab: String) {
+        let key = tab.lowercased()
+        if !visibleSidebarTabs.contains(key) {
+            visibleSidebarTabs.append(key)
+        }
+    }
+
+    /// Sidebar tabs that should be shown, filtered by context.
+    func activeSidebarTabs(hasProject: Bool) -> [String] {
+        visibleSidebarTabs.filter { tab in
+            if tab == "files" && !hasProject { return false }
+            return true
+        }
+    }
+
+    /// Map a stored tab key to the SidebarTab rawValue for lookup.
+    static let sidebarTabKeyToRawValue: [String: String] = [
+        "history": "History",
+        "cli": "CLI",
+        "files": "Files",
+    ]
+
     var terminalColorScheme: String = UserDefaults.standard.string(forKey: "terminalColorScheme") ?? "default" {
         didSet { UserDefaults.standard.set(terminalColorScheme, forKey: "terminalColorScheme") }
     }
 
     /// Available monospaced fonts suitable for terminal use
-    static let terminalFonts: [(name: String, display: String)] = [
-        ("Menlo-Regular", "Menlo"),
-        ("SFMono-Regular", "SF Mono"),
-        ("Monaco", "Monaco"),
-        ("CourierNewPSMT", "Courier New"),
-        ("AndaleMono", "Andale Mono"),
-    ]
+    static let terminalFonts: [(name: String, display: String)] = {
+        let candidates: [(name: String, display: String)] = [
+            ("MesloLGS-NF-Regular", "MesloLGS NF"),
+            ("Menlo-Regular", "Menlo"),
+            ("SFMono-Regular", "SF Mono"),
+            ("Monaco", "Monaco"),
+            ("CourierNewPSMT", "Courier New"),
+            ("AndaleMono", "Andale Mono"),
+        ]
+        return candidates.filter { NSFont(name: $0.name, size: 13) != nil }
+    }()
 
     /// Terminal color scheme definitions (ANSI 16 colors)
     static let terminalColorSchemes: [(id: String, display: String)] = [
@@ -194,6 +236,19 @@ final class AppState {
         ("nord", "Nord"),
         ("monokai", "Monokai"),
     ]
+
+    // MARK: - Claude Code Path Encoding
+
+    /// Encode a filesystem path to Claude Code's project directory name format.
+    static func claudeProjectDirName(for path: String) -> String {
+        path.replacingOccurrences(of: "/", with: "-")
+    }
+
+    /// Decode a Claude Code project directory name back to a filesystem path.
+    static func pathFromClaudeProjectDir(_ dirName: String) -> String {
+        dirName.replacingOccurrences(of: "-", with: "/")
+    }
+
     /// Pending session to navigate to when a project window opens or is already open.
     /// Keyed by projectId; consumed once applied.
     var pendingNotificationSession: [UUID: String] = [:]
@@ -363,6 +418,13 @@ final class AppState {
 
     /// Once per app launch — start services and load shared data
     func initialize() async {
+        // One-time migration: reset old "all tabs visible" default
+        if !UserDefaults.standard.bool(forKey: "sidebarTabsMigrated_v1") {
+            UserDefaults.standard.removeObject(forKey: "visibleSidebarTabs")
+            visibleSidebarTabs = ["history"]
+            UserDefaults.standard.set(true, forKey: "sidebarTabsMigrated_v1")
+        }
+
         ThemeStore.shared.current = selectedTheme
 
         let binary = await claude.findClaudeBinary()
@@ -382,6 +444,13 @@ final class AppState {
         if deduplicated.count != projects.count {
             projects = deduplicated
             try? await persistence.saveProjects(projects)
+        }
+
+        // Load open project tabs (default: all projects open)
+        if let saved = UserDefaults.standard.stringArray(forKey: "openProjectIds") {
+            openProjectIds = Set(saved.compactMap { UUID(uuidString: $0) })
+        } else {
+            openProjectIds = Set(projects.map(\.id))
         }
 
         if let cachedUser = await persistence.loadGitHubUser() {
@@ -1442,6 +1511,7 @@ final class AppState {
         guard !projects.contains(where: { $0.path == path }) else { return }
         let project = Project(name: name, path: path, gitHubRepo: gitHubRepo)
         projects.append(project)
+        openProjectIds.insert(project.id)
         do {
             try await persistence.saveProjects(projects)
         } catch {
@@ -1451,6 +1521,10 @@ final class AppState {
 
     func selectProject(_ project: Project, in window: WindowState) {
         guard window.selectedProject?.id != project.id else { return }
+
+        // Auto-show files tab when a project is selected
+        ensureSidebarTab("files")
+        openProjectIds.insert(project.id)
 
         if isStreaming(in: window) {
             detachCurrentStream(in: window)
@@ -1491,6 +1565,12 @@ final class AppState {
         let isGitRepo = FileManager.default.fileExists(atPath: url.appendingPathComponent(".git").path)
         let gitHubRepo = isGitRepo ? detectGitHubRepo(at: url.path) : nil
         await addAndSelectProject(name: url.lastPathComponent, path: url.path, gitHubRepo: gitHubRepo, in: window)
+
+        // Create ~/.claude/projects/ entry so it appears in CLI sessions tree
+        let encoded = Self.claudeProjectDirName(for: url.path)
+        let claudeProjectDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude/projects/\(encoded)")
+        try? FileManager.default.createDirectory(at: claudeProjectDir, withIntermediateDirectories: true)
     }
 
     private nonisolated func detectGitHubRepo(at path: String) -> String? {
@@ -1548,7 +1628,7 @@ final class AppState {
         guard let project = window.selectedProject else { return }
         let projectPath = project.path
         // Claude Code encodes project paths by replacing / with -
-        let encodedPath = projectPath.replacingOccurrences(of: "/", with: "-")
+        let encodedPath = Self.claudeProjectDirName(for: projectPath)
         let claudeProjectDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".claude/projects")
             .appendingPathComponent(encodedPath)
@@ -1638,12 +1718,27 @@ final class AppState {
             }
         }
 
-        // Build lookup: decoded path → project
-        let projectsByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
+        // Build lookup: decoded path → project (mutable — new projects get added)
+        var projectsByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
 
         for dir in dirs where dir.hasDirectoryPath {
-            let decodedPath = dir.lastPathComponent.replacingOccurrences(of: "-", with: "/")
-            guard let project = projectsByPath[decodedPath] else { continue }
+            let decodedPath = Self.pathFromClaudeProjectDir(dir.lastPathComponent)
+
+            // Skip paths that don't exist on disk (deleted projects)
+            guard fm.fileExists(atPath: decodedPath) else { continue }
+
+            // Auto-create project if not already in Clarc
+            var project: Project
+            if let existing = projectsByPath[decodedPath] {
+                project = existing
+            } else {
+                let name = URL(fileURLWithPath: decodedPath).lastPathComponent
+                project = Project(name: name, path: decodedPath, gitHubRepo: nil)
+                projects.append(project)
+                projectsByPath[decodedPath] = project
+                try? await persistence.saveProjects(projects)
+                logger.info("Auto-created project '\(name)' from Claude Code CLI")
+            }
 
             let existingIds = Set(allSessionSummaries.filter { $0.projectId == project.id }.map(\.id))
             guard let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) else { continue }
@@ -1967,6 +2062,7 @@ final class AppState {
     func addProject(_ project: Project) {
         guard !projects.contains(where: { $0.path == project.path }) else { return }
         projects.append(project)
+        openProjectIds.insert(project.id)
         Task {
             do { try await persistence.saveProjects(projects) }
             catch { logger.error("Failed to save projects: \(error.localizedDescription)") }

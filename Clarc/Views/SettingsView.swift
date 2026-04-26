@@ -70,6 +70,8 @@ struct GeneralSettingsTab: View {
             VStack(alignment: .leading, spacing: 24) {
                 themeSection
                 Divider()
+                sidebarSection
+                Divider()
                 notificationsSection(appState: $appState.notificationsEnabled)
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
@@ -80,6 +82,59 @@ struct GeneralSettingsTab: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    // MARK: - Sidebar Section
+
+    private var sidebarSection: some View {
+        @Bindable var appState = appState
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Sidebar")
+                .font(.system(size: 13, weight: .semibold))
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Default Tab")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+
+                Picker("", selection: $appState.defaultSidebarTab) {
+                    Text("History").tag("history")
+                    Text("CLI").tag("cli")
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Visible Tabs")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 12) {
+                    ForEach(["history", "cli", "files"], id: \.self) { tab in
+                        Toggle(tab.capitalized, isOn: Binding(
+                            get: { appState.visibleSidebarTabs.contains(tab) },
+                            set: { on in
+                                if on {
+                                    if !appState.visibleSidebarTabs.contains(tab) {
+                                        appState.visibleSidebarTabs.append(tab)
+                                    }
+                                } else if appState.visibleSidebarTabs.count > 1 {
+                                    appState.visibleSidebarTabs.removeAll { $0 == tab }
+                                }
+                            }
+                        ))
+                        .toggleStyle(.checkbox)
+                        .font(.system(size: 13))
+                    }
+                }
+
+                Text("Tabs appear automatically when you open sessions or projects. Right-click tabs to close them.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 

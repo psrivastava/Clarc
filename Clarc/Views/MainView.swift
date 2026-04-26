@@ -16,15 +16,18 @@ struct MainView: View {
     @State private var projectToDelete: Project? = nil
     @State private var projectToRename: Project? = nil
     @State private var renameText: String = ""
+    @State private var didSetInitialTab = false
 
     enum SidebarTab: String, CaseIterable {
         case history = "History"
+        case cli = "CLI"
         case files = "Files"
 
         var icon: String {
             switch self {
             case .files: "folder"
             case .history: "clock"
+            case .cli: "terminal"
             }
         }
     }
@@ -74,6 +77,18 @@ struct MainView: View {
                 }
                 .onAppear {
                     windowState.focusMode = appState.focusMode
+                    if !didSetInitialTab {
+                        didSetInitialTab = true
+                        if let tab = SidebarTab(rawValue: appState.defaultSidebarTab.capitalized) {
+                            sidebarTab = tab
+                        }
+                    }
+                }
+                .onChange(of: appState.visibleSidebarTabs) { _, newTabs in
+                    if !newTabs.contains(sidebarTab.rawValue.lowercased()),
+                       let first = visibleTabs.first {
+                        sidebarTab = first
+                    }
                 }
                 .navigationTitle({
                     let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
@@ -86,25 +101,26 @@ struct MainView: View {
                 .toolbar {
                     if columnVisibility != .detailOnly {
                         ToolbarItemGroup(placement: .confirmationAction) {
-                            Button {
-                                showGitHubSheet = true
-                            } label: {
-                                Image("GitHubMark")
-                                    .resizable()
-                                    .frame(width: 18, height: 18)
-                                    .foregroundStyle(ClaudeTheme.textSecondary)
-                            }
-                            .buttonStyle(.plain)
-                            .help(appState.isLoggedIn ? "Manage GitHub Repos" : "Connect GitHub")
+                            Menu {
+                                Button {
+                                    showFilePicker = true
+                                } label: {
+                                    Label("Add Project Folder", systemImage: "folder.badge.plus")
+                                }
 
-                            Button {
-                                showFilePicker = true
+                                Button {
+                                    showGitHubSheet = true
+                                } label: {
+                                    Label("Clone from GitHub", systemImage: "arrow.down.circle")
+                                }
                             } label: {
                                 Image(systemName: "plus")
                                     .font(.system(size: 16))
                                     .foregroundStyle(ClaudeTheme.textSecondary)
                             }
-                            .buttonStyle(.plain)
+                            .menuStyle(.borderlessButton)
+                            .menuIndicator(.hidden)
+                            .fixedSize()
                             .help("Add Project")
                             .fileImporter(
                                 isPresented: $showFilePicker,
@@ -127,26 +143,34 @@ struct MainView: View {
 
     // MARK: - Sidebar
 
+    private var visibleTabs: [SidebarTab] {
+        appState.activeSidebarTabs(hasProject: windowState.selectedProject != nil)
+            .compactMap { SidebarTab(rawValue: AppState.sidebarTabKeyToRawValue[$0] ?? $0) }
+    }
+
     private var sidebarContent: some View {
         VStack(spacing: 0) {
-            if windowState.selectedProject != nil {
-                ClaudeSegmentedControl(selection: $sidebarTab)
+            let tabs = visibleTabs
+            if !tabs.isEmpty {
+                ClaudeSegmentedControl(selection: $sidebarTab, tabs: tabs)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
+            }
 
-                switch sidebarTab {
-                case .files:
+            switch sidebarTab {
+            case .files:
+                if windowState.selectedProject != nil {
                     FileTreeView(projectPath: windowState.selectedProject!.path, searchTrigger: $fileSearchTrigger)
-                case .history:
-                    HistoryListView()
+                } else {
+                    CLISessionsView()
                 }
-            } else {
+            case .history:
                 HistoryListView()
+            case .cli:
+                CLISessionsView()
             }
 
-            if windowState.selectedProject != nil {
-                SidebarTabShortcuts(sidebarTab: $sidebarTab, fileSearchTrigger: $fileSearchTrigger, columnVisibility: $columnVisibility)
-            }
+            SidebarTabShortcuts(sidebarTab: $sidebarTab, fileSearchTrigger: $fileSearchTrigger, columnVisibility: $columnVisibility)
 
             ClaudeThemeDivider()
 
@@ -171,7 +195,7 @@ struct MainView: View {
                 HStack(spacing: 4) {
                     // isSelected is computed here and passed as a value so ProjectTabButton.body
                     // does not access windowState.selectedProject — only the 2 changed buttons re-render.
-                    ForEach(appState.projects) { project in
+                    ForEach(appState.projects.filter { appState.openProjectIds.contains($0.id) }) { project in
                         ProjectTabButton(
                             project: project,
                             isSelected: windowState.selectedProject?.id == project.id,
@@ -356,6 +380,27 @@ struct ProjectTabButton: View {
         }
         .contextMenu {
             Button {
+                appState.openProjectIds.remove(project.id)
+                if isSelected {
+                    // Select another open project, or deselect
+                    if let next = appState.projects.first(where: { $0.id != project.id && appState.openProjectIds.contains($0.id) }) {
+                        appState.selectProject(next, in: windowState)
+                    } else {
+                        windowState.selectedProject = nil
+                    }
+                }
+            } label: {
+                Label("Close Tab", systemImage: "xmark")
+            }
+            Button {
+                appState.openProjectIds = [project.id]
+                if !isSelected {
+                    appState.selectProject(project, in: windowState)
+                }
+            } label: {
+                Label("Close Other Tabs", systemImage: "xmark.circle")
+            }
+            Button {
                 renameText = project.name
                 projectToRename = project
             } label: {
@@ -403,6 +448,7 @@ struct InspectorTabControl: View {
 // MARK: - Inspector Panel
 
 struct InspectorPanel: View {
+    @Environment(AppState.self) private var appState
     @Environment(WindowState.self) private var windowState
     @State private var inspectorProcess = TerminalProcess()
     @State private var terminalResetID = UUID()
@@ -446,7 +492,10 @@ struct InspectorPanel: View {
                 executable: "/bin/zsh",
                 arguments: ["-il"],
                 currentDirectory: windowState.selectedProject?.path,
-                process: inspectorProcess
+                process: inspectorProcess,
+                fontName: appState.terminalFontName,
+                fontSize: appState.terminalFontSize,
+                colorScheme: appState.terminalColorScheme
             )
             .id(terminalResetID)
             .padding(8)
@@ -487,10 +536,12 @@ private struct InspectorIconButton: View {
 
 struct ClaudeSegmentedControl: View {
     @Binding var selection: MainView.SidebarTab
+    @Environment(AppState.self) private var appState
+    var tabs: [MainView.SidebarTab]
 
     var body: some View {
         HStack(spacing: 2) {
-            ForEach(MainView.SidebarTab.allCases, id: \.self) { tab in
+            ForEach(tabs, id: \.self) { tab in
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) { selection = tab }
                 } label: {
@@ -510,10 +561,39 @@ struct ClaudeSegmentedControl: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .contextMenu {
+                    Button("Close Tab") {
+                        closeTab(tab)
+                    }
+                    if tabs.count > 1 {
+                        Button("Close Other Tabs") {
+                            closeOtherTabs(tab)
+                        }
+                    }
+                    Divider()
+                    Button("Restore All Tabs") {
+                        for t in ["history", "cli", "files"] {
+                            appState.ensureSidebarTab(t)
+                        }
+                    }
+                }
             }
         }
         .padding(2)
         .background(ClaudeTheme.surfaceSecondary, in: RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusSmall))
+    }
+
+    private func closeTab(_ tab: MainView.SidebarTab) {
+        let key = tab.rawValue.lowercased()
+        appState.visibleSidebarTabs.removeAll { $0 == key }
+        if selection == tab, let first = tabs.first(where: { $0 != tab }) {
+            selection = first
+        }
+    }
+
+    private func closeOtherTabs(_ tab: MainView.SidebarTab) {
+        appState.visibleSidebarTabs = [tab.rawValue.lowercased()]
+        selection = tab
     }
 }
 
@@ -544,9 +624,16 @@ struct SidebarTabShortcuts: View {
 
                 Button("") {
                     columnVisibility = .all
-                    withAnimation(.easeInOut(duration: 0.15)) { sidebarTab = .files }
+                    withAnimation(.easeInOut(duration: 0.15)) { sidebarTab = .cli }
                 }
                 .keyboardShortcut("2", modifiers: .command)
+                .hidden()
+
+                Button("") {
+                    columnVisibility = .all
+                    withAnimation(.easeInOut(duration: 0.15)) { sidebarTab = .files }
+                }
+                .keyboardShortcut("3", modifiers: .command)
                 .hidden()
             }
     }

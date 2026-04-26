@@ -32,18 +32,26 @@ struct EmbeddedTerminalView: NSViewRepresentable {
     var initialCommand: String?
     var onProcessTerminated: ((Int32) -> Void)?
     var process: TerminalProcess?
+    var fontName: String = "Menlo-Regular"
+    var fontSize: Double = 13
+    var colorScheme: String = "default"
 
     func makeNSView(context: Context) -> LocalProcessTerminalView {
         let tv = LocalProcessTerminalView(frame: .zero)
 
-        // Set terminal background/foreground colors to match the theme
+        // Apply font
+        let termFont = NSFont(name: fontName, size: CGFloat(fontSize))
+            ?? NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
+        tv.font = termFont
+
+        // Apply color scheme
         let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        tv.nativeBackgroundColor = isDark
-            ? NSColor(red: 0x1A/255.0, green: 0x1A/255.0, blue: 0x18/255.0, alpha: 1) // dark: codeBackground
-            : NSColor(red: 0xE8/255.0, green: 0xE5/255.0, blue: 0xDC/255.0, alpha: 1) // light: codeBackground
-        tv.nativeForegroundColor = isDark
-            ? NSColor(red: 0xCC/255.0, green: 0xC9/255.0, blue: 0xC0/255.0, alpha: 1) // dark: textPrimary
-            : NSColor(red: 0x3C/255.0, green: 0x39/255.0, blue: 0x29/255.0, alpha: 1) // light: textPrimary
+        let colors = TerminalColorSchemes.colors(for: colorScheme, isDark: isDark)
+        tv.nativeBackgroundColor = colors.background
+        tv.nativeForegroundColor = colors.foreground
+        if let ansi = colors.ansi {
+            tv.installColors(ansi)
+        }
 
         tv.processDelegate = context.coordinator
         tv.startProcess(
@@ -190,7 +198,10 @@ struct InteractiveTerminalPopup: View {
                         processExited = true
                     }
                 },
-                process: process
+                process: process,
+                fontName: appState.terminalFontName,
+                fontSize: appState.terminalFontSize,
+                colorScheme: appState.terminalColorScheme
             )
             .padding(8)
             .background(ClaudeTheme.codeBackground)
@@ -223,6 +234,68 @@ struct InteractiveTerminalPopup: View {
             appState.dismissInteractiveTerminal(exitCode: exitCode, in: windowState)
         } else {
             environmentDismiss()
+        }
+    }
+}
+
+// MARK: - Terminal Color Schemes
+
+enum TerminalColorSchemes {
+    struct TermColors {
+        let background: NSColor
+        let foreground: NSColor
+        let ansi: [SwiftTerm.Color]?
+    }
+
+    private static func c(_ r: UInt8, _ g: UInt8, _ b: UInt8) -> SwiftTerm.Color {
+        SwiftTerm.Color(red: UInt16(r) << 8, green: UInt16(g) << 8, blue: UInt16(b) << 8)
+    }
+
+    private static func ns(_ r: UInt8, _ g: UInt8, _ b: UInt8) -> NSColor {
+        NSColor(red: CGFloat(r)/255, green: CGFloat(g)/255, blue: CGFloat(b)/255, alpha: 1)
+    }
+
+    static func colors(for scheme: String, isDark: Bool) -> TermColors {
+        switch scheme {
+        case "solarizedDark":
+            return TermColors(
+                background: ns(0, 43, 54), foreground: ns(131, 148, 150),
+                ansi: [c(7,54,66), c(220,50,47), c(133,153,0), c(181,137,0),
+                       c(38,139,210), c(211,54,130), c(42,161,152), c(238,232,213),
+                       c(0,43,54), c(203,75,22), c(88,110,117), c(101,123,131),
+                       c(131,148,150), c(108,113,196), c(147,161,161), c(253,246,227)])
+        case "solarizedLight":
+            return TermColors(
+                background: ns(253, 246, 227), foreground: ns(101, 123, 131),
+                ansi: [c(238,232,213), c(220,50,47), c(133,153,0), c(181,137,0),
+                       c(38,139,210), c(211,54,130), c(42,161,152), c(7,54,66),
+                       c(253,246,227), c(203,75,22), c(147,161,161), c(131,148,150),
+                       c(101,123,131), c(108,113,196), c(88,110,117), c(0,43,54)])
+        case "dracula":
+            return TermColors(
+                background: ns(40, 42, 54), foreground: ns(248, 248, 242),
+                ansi: [c(33,34,44), c(255,85,85), c(80,250,123), c(241,250,140),
+                       c(98,114,164), c(255,121,198), c(139,233,253), c(248,248,242),
+                       c(68,71,90), c(255,110,110), c(105,255,148), c(255,255,165),
+                       c(123,139,189), c(255,146,223), c(164,255,255), c(255,255,255)])
+        case "nord":
+            return TermColors(
+                background: ns(46, 52, 64), foreground: ns(216, 222, 233),
+                ansi: [c(59,66,82), c(191,97,106), c(163,190,140), c(235,203,139),
+                       c(129,161,193), c(180,142,173), c(136,192,208), c(229,233,240),
+                       c(76,86,106), c(191,97,106), c(163,190,140), c(235,203,139),
+                       c(129,161,193), c(180,142,173), c(143,188,187), c(236,239,244)])
+        case "monokai":
+            return TermColors(
+                background: ns(39, 40, 34), foreground: ns(248, 248, 242),
+                ansi: [c(39,40,34), c(249,38,114), c(166,226,46), c(244,191,117),
+                       c(102,217,239), c(174,129,255), c(161,239,228), c(248,248,242),
+                       c(117,113,94), c(249,38,114), c(166,226,46), c(244,191,117),
+                       c(102,217,239), c(174,129,255), c(161,239,228), c(249,248,245)])
+        default:
+            let bg: NSColor = isDark ? ns(0x1A, 0x1A, 0x18) : ns(0xE8, 0xE5, 0xDC)
+            let fg: NSColor = isDark ? ns(0xCC, 0xC9, 0xC0) : ns(0x3C, 0x39, 0x29)
+            return TermColors(background: bg, foreground: fg, ansi: nil)
         }
     }
 }

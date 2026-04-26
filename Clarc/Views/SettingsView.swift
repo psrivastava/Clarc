@@ -24,17 +24,23 @@ struct SettingsView: View {
                 }
                 .tag(1)
 
-            SlashCommandManagerView(isEmbedded: true)
+            TerminalSettingsTab()
                 .tabItem {
-                    Label("Slash Commands", systemImage: "terminal.fill")
+                    Label("Terminal", systemImage: "terminal.fill")
                 }
                 .tag(2)
+
+            SlashCommandManagerView(isEmbedded: true)
+                .tabItem {
+                    Label("Slash Commands", systemImage: "command")
+                }
+                .tag(3)
 
             ShortcutManagerView(isEmbedded: true)
                 .tabItem {
                     Label("Shortcuts", systemImage: "bolt.fill")
                 }
-                .tag(3)
+                .tag(4)
         }
         .frame(width: 680, height: 620)
         .focusable(false)
@@ -383,6 +389,78 @@ struct ChatSettingsTab: View {
         case "xhigh":  return "Extra High"
         case "max":    return "Max"
         default:       return effort.capitalized
+        }
+    }
+}
+
+// MARK: - Terminal Settings Tab
+
+struct TerminalSettingsTab: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        @Bindable var appState = appState
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // Font
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Font")
+                        .font(.system(size: 13, weight: .semibold))
+
+                    HStack(spacing: 12) {
+                        Picker("Family", selection: $appState.terminalFontName) {
+                            ForEach(AppState.terminalFonts, id: \.name) { f in
+                                Text(f.display).tag(f.name)
+                            }
+                        }
+                        .labelsHidden()
+                        .fixedSize()
+
+                        HStack(spacing: 4) {
+                            Text("Size:")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                            TextField("", value: $appState.terminalFontSize, format: .number)
+                                .frame(width: 44)
+                                .textFieldStyle(.roundedBorder)
+                            Stepper("", value: $appState.terminalFontSize, in: 8...32, step: 1)
+                                .labelsHidden()
+                        }
+                    }
+
+                    // Preview
+                    Text("AaBbCc 0123 {}[]() ~!@#$%")
+                        .font(Font(NSFont(name: appState.terminalFontName, size: CGFloat(appState.terminalFontSize))
+                            ?? NSFont.monospacedSystemFont(ofSize: CGFloat(appState.terminalFontSize), weight: .regular)))
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+
+                Divider()
+
+                // Color Scheme
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Color Scheme")
+                        .font(.system(size: 13, weight: .semibold))
+
+                    Text("Applies to the interactive terminal window.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+
+                    Picker("", selection: $appState.terminalColorScheme) {
+                        ForEach(AppState.terminalColorSchemes, id: \.id) { s in
+                            Text(s.display).tag(s.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                }
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

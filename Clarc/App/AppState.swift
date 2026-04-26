@@ -161,6 +161,39 @@ final class AppState {
     var focusMode: Bool = (UserDefaults.standard.object(forKey: "focusMode") as? Bool) ?? false {
         didSet { UserDefaults.standard.set(focusMode, forKey: "focusMode") }
     }
+
+    // MARK: - Terminal Settings
+
+    var terminalFontName: String = UserDefaults.standard.string(forKey: "terminalFontName") ?? "Menlo-Regular" {
+        didSet { UserDefaults.standard.set(terminalFontName, forKey: "terminalFontName") }
+    }
+
+    var terminalFontSize: Double = UserDefaults.standard.object(forKey: "terminalFontSize") as? Double ?? 13 {
+        didSet { UserDefaults.standard.set(terminalFontSize, forKey: "terminalFontSize") }
+    }
+
+    var terminalColorScheme: String = UserDefaults.standard.string(forKey: "terminalColorScheme") ?? "default" {
+        didSet { UserDefaults.standard.set(terminalColorScheme, forKey: "terminalColorScheme") }
+    }
+
+    /// Available monospaced fonts suitable for terminal use
+    static let terminalFonts: [(name: String, display: String)] = [
+        ("Menlo-Regular", "Menlo"),
+        ("SFMono-Regular", "SF Mono"),
+        ("Monaco", "Monaco"),
+        ("CourierNewPSMT", "Courier New"),
+        ("AndaleMono", "Andale Mono"),
+    ]
+
+    /// Terminal color scheme definitions (ANSI 16 colors)
+    static let terminalColorSchemes: [(id: String, display: String)] = [
+        ("default", "Default (Theme)"),
+        ("solarizedDark", "Solarized Dark"),
+        ("solarizedLight", "Solarized Light"),
+        ("dracula", "Dracula"),
+        ("nord", "Nord"),
+        ("monokai", "Monokai"),
+    ]
     /// Pending session to navigate to when a project window opens or is already open.
     /// Keyed by projectId; consumed once applied.
     var pendingNotificationSession: [UUID: String] = [:]
@@ -359,6 +392,9 @@ final class AppState {
 
         // Load all session summaries (excluding message bodies)
         allSessionSummaries = await persistence.loadAllSessionSummaries()
+
+        // Import any Claude Code CLI sessions not yet tracked
+        await importAllClaudeCodeSessions()
 
         if claudeInstalled && !onboardingCompleted {
             onboardingCompleted = true
@@ -1446,6 +1482,7 @@ final class AppState {
         // Refresh session history in the background
         Task { [weak self] in
             guard let self else { return }
+            await importClaudeCodeSessions(in: window)
             await loadSessionHistory(in: window)
         }
     }
@@ -1502,6 +1539,133 @@ final class AppState {
         // Replace that project's summaries with the latest data from disk
         allSessionSummaries.removeAll { $0.projectId == project.id }
         allSessionSummaries.append(contentsOf: sessions.map(\.summary))
+    }
+
+    /// Import sessions from Claude Code CLI's ~/.claude/projects/ into the current project.
+    /// Scans the JSONL files and creates lightweight session summaries so they appear in history
+    /// and can be resumed via `claude --resume <id>`.
+    func importClaudeCodeSessions(in window: WindowState) async {
+        guard let project = window.selectedProject else { return }
+        let projectPath = project.path
+        // Claude Code encodes project paths by replacing / with -
+        let encodedPath = projectPath.replacingOccurrences(of: "/", with: "-")
+        let claudeProjectDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude/projects")
+            .appendingPathComponent(encodedPath)
+
+        let fm = FileManager.default
+        guard let files = try? fm.contentsOfDirectory(at: claudeProjectDir, includingPropertiesForKeys: [.contentModificationDateKey], options: .skipsHiddenFiles) else { return }
+
+        let existingIds = Set(allSessionSummaries.filter { $0.projectId == project.id }.map(\.id))
+        var imported = 0
+
+        for file in files where file.pathExtension == "jsonl" {
+            let sessionId = file.deletingPathExtension().lastPathComponent
+            guard !existingIds.contains(sessionId) else { continue }
+
+            // Read first user message as title, get file modification date
+            var title = "Imported Session"
+            var createdAt = Date()
+            if let attrs = try? fm.attributesOfItem(atPath: file.path),
+               let modDate = attrs[.modificationDate] as? Date {
+                createdAt = modDate
+            }
+
+            // Scan for first human message to use as title
+            if let handle = try? FileHandle(forReadingFrom: file) {
+                defer { handle.closeFile() }
+                let chunk = handle.readData(ofLength: 8192)
+                if let text = String(data: chunk, encoding: .utf8) {
+                    for line in text.components(separatedBy: "\n") {
+                        guard !line.isEmpty,
+                              let data = line.data(using: .utf8),
+                              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
+                        if let display = obj["display"] as? String, !display.isEmpty, !display.hasPrefix("/") {
+                            title = String(display.prefix(80))
+                            break
+                        }
+                        if let role = obj["role"] as? String, role == "human",
+                           let msg = obj["message"] as? [String: Any],
+                           let content = msg["content"] as? String, !content.isEmpty {
+                            title = String(content.prefix(80))
+                            break
+                        }
+                    }
+                }
+            }
+
+            let session = ChatSession(
+                id: sessionId,
+                projectId: project.id,
+                title: title,
+                messages: [],
+                createdAt: createdAt,
+                updatedAt: createdAt
+            )
+            do {
+                try await persistence.saveSession(session)
+                allSessionSummaries.append(session.summary)
+                imported += 1
+            } catch {
+                logger.error("Failed to import session \(sessionId): \(error.localizedDescription)")
+            }
+        }
+
+        if imported > 0 {
+            logger.info("Imported \(imported) Claude Code session(s) for project \(projectPath)")
+        }
+    }
+
+    /// Scan all Claude Code CLI project directories and import sessions for known projects.
+    private func importAllClaudeCodeSessions() async {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let claudeProjectsDir = home.appendingPathComponent(".claude/projects")
+        let fm = FileManager.default
+        guard let dirs = try? fm.contentsOfDirectory(at: claudeProjectsDir, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) else { return }
+
+        // Pre-load session titles from history.jsonl
+        var sessionTitles: [String: String] = [:]
+        let historyFile = home.appendingPathComponent(".claude/history.jsonl")
+        if let data = try? Data(contentsOf: historyFile), let text = String(data: data, encoding: .utf8) {
+            for line in text.components(separatedBy: "\n") where !line.isEmpty {
+                guard let ld = line.data(using: .utf8),
+                      let obj = try? JSONSerialization.jsonObject(with: ld) as? [String: Any],
+                      let sid = obj["sessionId"] as? String,
+                      sessionTitles[sid] == nil,
+                      let display = obj["display"] as? String,
+                      !display.isEmpty, !display.hasPrefix("/") else { continue }
+                sessionTitles[sid] = String(display.prefix(80))
+            }
+        }
+
+        // Build lookup: decoded path → project
+        let projectsByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
+
+        for dir in dirs where dir.hasDirectoryPath {
+            let decodedPath = dir.lastPathComponent.replacingOccurrences(of: "-", with: "/")
+            guard let project = projectsByPath[decodedPath] else { continue }
+
+            let existingIds = Set(allSessionSummaries.filter { $0.projectId == project.id }.map(\.id))
+            guard let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) else { continue }
+
+            for file in files where file.pathExtension == "jsonl" {
+                let sessionId = file.deletingPathExtension().lastPathComponent
+                guard !existingIds.contains(sessionId) else { continue }
+
+                let title = sessionTitles[sessionId] ?? "Imported Session"
+                var createdAt = Date()
+                if let attrs = try? fm.attributesOfItem(atPath: file.path),
+                   let modDate = attrs[.modificationDate] as? Date {
+                    createdAt = modDate
+                }
+
+                let session = ChatSession(id: sessionId, projectId: project.id, title: title, messages: [], createdAt: createdAt, updatedAt: createdAt)
+                do {
+                    try await persistence.saveSession(session)
+                    allSessionSummaries.append(session.summary)
+                } catch {}
+            }
+        }
     }
 
     private func switchToSession(_ session: ChatSession, messages loadedMessages: [ChatMessage]? = nil, in window: WindowState) {

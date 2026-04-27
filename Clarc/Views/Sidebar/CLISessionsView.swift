@@ -1,6 +1,5 @@
 import SwiftUI
 import ClarcCore
-import os
 
 // MARK: - CLI Sessions Tab
 
@@ -41,6 +40,11 @@ struct CLISessionsView: View {
                 emptyState
             } else {
                 sessionList
+                    .onKeyPress(.upArrow) { moveFocus(-1); return .handled }
+                    .onKeyPress(.downArrow) { moveFocus(1); return .handled }
+                    .onKeyPress(.rightArrow) { expandFocused(); return .handled }
+                    .onKeyPress(.leftArrow) { collapseFocused(); return .handled }
+                    .onKeyPress(.return) { activateFocused(); return .handled }
             }
         }
         .task { await loadCLISessions() }
@@ -115,7 +119,8 @@ struct CLISessionsView: View {
 
     private func cliSessionRow(_ session: CLISession, projectPath: String) -> some View {
         Button {
-            resumeCLISession(session, projectPath: projectPath)
+            focusedItem = .session(session.id)
+            loadPreview(session, projectPath: projectPath)
         } label: {
             VStack(alignment: .leading, spacing: 3) {
                 Text(session.title)
@@ -167,6 +172,58 @@ struct CLISessionsView: View {
                 Label("Delete Session", systemImage: "trash")
             }
         }
+    }
+
+    // MARK: - Load Preview
+
+    private func loadPreview(_ session: CLISession, projectPath: String) {
+        // Don't replace an active/resumed session with a preview
+        guard windowState.currentSessionId == nil else { return }
+        let encoded = AppState.claudeProjectDirName(for: projectPath)
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let file = home.appendingPathComponent(".claude/projects/\(encoded)/\(session.id).jsonl")
+
+        var messages: [String] = []
+        if let data = try? Data(contentsOf: file), let text = String(data: data, encoding: .utf8) {
+            let lines = text.components(separatedBy: "\n").reversed()
+            for line in lines where messages.count < 3 {
+                guard !line.isEmpty,
+                      let ld = line.data(using: .utf8),
+                      let obj = try? JSONSerialization.jsonObject(with: ld) as? [String: Any],
+                      let type = obj["type"] as? String, type == "user",
+                      let msg = obj["message"] as? [String: Any],
+                      let content = msg["content"] as? String,
+                      !content.hasPrefix("<") else { continue }
+                let clean = String(content.prefix(120))
+                if !clean.isEmpty { messages.append(clean) }
+            }
+            // Also check array-style content
+            if messages.isEmpty {
+                for line in lines where messages.count < 3 {
+                    guard !line.isEmpty,
+                          let ld = line.data(using: .utf8),
+                          let obj = try? JSONSerialization.jsonObject(with: ld) as? [String: Any],
+                          let type = obj["type"] as? String, type == "user",
+                          let msg = obj["message"] as? [String: Any],
+                          let content = msg["content"] as? [[String: Any]] else { continue }
+                    for block in content {
+                        if let text = block["text"] as? String, !text.hasPrefix("<"), !text.isEmpty {
+                            messages.append(String(text.prefix(120)))
+                            break
+                        }
+                    }
+                }
+            }
+        }
+
+        windowState.selectedProject = nil
+        windowState.previewCLISession = CLISessionPreview(
+            sessionId: session.id,
+            title: session.title,
+            projectPath: projectPath,
+            modifiedAt: session.modifiedAt,
+            recentMessages: messages.reversed()
+        )
     }
 
     // MARK: - Empty State
@@ -229,7 +286,7 @@ struct CLISessionsView: View {
         case .session(let sid):
             if let project = cliProjects.first(where: { $0.sessions.contains { $0.id == sid } }),
                let session = project.sessions.first(where: { $0.id == sid }) {
-                resumeCLISession(session, projectPath: project.path)
+                loadPreview(session, projectPath: project.path)
             }
         case .none: break
         }
@@ -256,32 +313,34 @@ struct CLISessionsView: View {
     // MARK: - Resume
 
     private func resumeCLISession(_ session: CLISession, projectPath: String) {
-        // Ensure the project exists in Clarc
         if !appState.projects.contains(where: { $0.path == projectPath }) {
             let name = URL(fileURLWithPath: projectPath).lastPathComponent
             appState.addProject(Project(name: name, path: projectPath, gitHubRepo: nil))
         }
 
-        // Select the project and resume the session
-        if let project = appState.projects.first(where: { $0.path == projectPath }) {
-            appState.selectProject(project, in: windowState)
+        guard let project = appState.projects.first(where: { $0.path == projectPath }) else { return }
 
-            // Add session summary if not already tracked
-            if !appState.allSessionSummaries.contains(where: { $0.id == session.id }) {
-                let chatSession = ChatSession(
-                    id: session.id,
-                    projectId: project.id,
-                    title: session.title,
-                    messages: [],
-                    createdAt: session.modifiedAt,
-                    updatedAt: session.modifiedAt
-                )
-                appState.allSessionSummaries.insert(chatSession.summary, at: 0)
-                Task { try? await appState.persistence.saveSession(chatSession) }
-            }
-
-            appState.selectSession(id: session.id, in: windowState)
+        if windowState.selectedProject?.id != project.id {
+            appState.openProjectIds.insert(project.id)
+            windowState.selectedProject = project
+            UserDefaults.standard.set(project.id.uuidString, forKey: "selectedProjectId")
         }
+
+        let chatSession = ChatSession(
+            id: session.id,
+            projectId: project.id,
+            title: session.title,
+            messages: [],
+            createdAt: session.modifiedAt,
+            updatedAt: session.modifiedAt
+        )
+        if !appState.allSessionSummaries.contains(where: { $0.id == session.id }) {
+            appState.allSessionSummaries.insert(chatSession.summary, at: 0)
+            Task { try? await appState.persistence.saveSession(chatSession) }
+        }
+
+        windowState.previewCLISession = nil
+        Task { await appState.resumeSession(chatSession, in: windowState) }
     }
 
     // MARK: - Load

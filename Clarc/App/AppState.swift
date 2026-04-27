@@ -179,11 +179,11 @@ final class AppState {
         didSet { UserDefaults.standard.set(terminalFontSize, forKey: "terminalFontSize") }
     }
 
-    var defaultSidebarTab: String = UserDefaults.standard.string(forKey: "defaultSidebarTab") ?? "history" {
+    var defaultSidebarTab: String = UserDefaults.standard.string(forKey: "defaultSidebarTab") ?? "cli" {
         didSet { UserDefaults.standard.set(defaultSidebarTab, forKey: "defaultSidebarTab") }
     }
 
-    var visibleSidebarTabs: [String] = (UserDefaults.standard.array(forKey: "visibleSidebarTabs") as? [String]) ?? ["history"] {
+    var visibleSidebarTabs: [String] = (UserDefaults.standard.array(forKey: "visibleSidebarTabs") as? [String]) ?? ["cli"] {
         didSet { UserDefaults.standard.set(visibleSidebarTabs, forKey: "visibleSidebarTabs") }
     }
 
@@ -421,7 +421,7 @@ final class AppState {
         // One-time migration: reset old "all tabs visible" default
         if !UserDefaults.standard.bool(forKey: "sidebarTabsMigrated_v1") {
             UserDefaults.standard.removeObject(forKey: "visibleSidebarTabs")
-            visibleSidebarTabs = ["history"]
+            visibleSidebarTabs = ["cli"]
             UserDefaults.standard.set(true, forKey: "sidebarTabsMigrated_v1")
         }
 

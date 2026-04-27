@@ -6,7 +6,10 @@ import ClarcChatKit
 struct ProjectWindowView: View {
     @Environment(AppState.self) private var appState
     @Environment(WindowState.self) private var windowState
-    @State private var sidebarTab: MainView.SidebarTab = .history
+    @State private var sidebarTab: MainView.SidebarTab = {
+        let key = UserDefaults.standard.string(forKey: "defaultSidebarTab") ?? "cli"
+        return MainView.SidebarTab(rawValue: key.capitalized) ?? .cli
+    }()
     @State private var fileSearchTrigger = false
     @State private var inspectorStarted = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -160,6 +163,8 @@ struct ProjectWindowView: View {
                     ChatView()
                 }
                 .modifier(ChatDetailModifiers())
+            } else if let preview = windowState.previewCLISession {
+                CLISessionDetailView(preview: preview)
             } else {
                 ProgressView()
                     .controlSize(.small)

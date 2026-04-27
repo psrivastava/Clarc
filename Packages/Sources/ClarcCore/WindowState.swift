@@ -101,6 +101,7 @@ public final class WindowState {
     /// Per-session permission mode override. When set, overrides the global permissionMode.
     /// Cleared when a new chat is started or a different session is selected.
     public var sessionPermissionMode: PermissionMode?
+    public var previewCLISession: CLISessionPreview?
     public var requestInputFocus = false
     public var isInitialized = false
     public var errorMessage: String?

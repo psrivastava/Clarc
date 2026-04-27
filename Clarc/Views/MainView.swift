@@ -9,7 +9,10 @@ struct MainView: View {
     @State private var showGitHubSheet = false
     @State private var showFilePicker = false
     @Environment(\.openSettings) private var openSettings
-    @State private var sidebarTab: SidebarTab = .history
+    @State private var sidebarTab: SidebarTab = {
+        let key = UserDefaults.standard.string(forKey: "defaultSidebarTab") ?? "cli"
+        return SidebarTab(rawValue: key.capitalized) ?? .cli
+    }()
     @State private var fileSearchTrigger = false
     @State private var inspectorStarted = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -112,27 +115,16 @@ struct MainView: View {
                 .toolbar {
                     if columnVisibility != .detailOnly {
                         ToolbarItemGroup(placement: .confirmationAction) {
-                            Menu {
-                                Button {
-                                    showFilePicker = true
-                                } label: {
-                                    Label("Add Project Folder", systemImage: "folder.badge.plus")
-                                }
-
-                                Button {
-                                    showGitHubSheet = true
-                                } label: {
-                                    Label("Clone from GitHub", systemImage: "arrow.down.circle")
-                                }
+                            Button {
+                                windowState.selectedProject = nil
+                                windowState.previewCLISession = nil
                             } label: {
                                 Image(systemName: "plus")
                                     .font(.system(size: 16))
                                     .foregroundStyle(ClaudeTheme.textSecondary)
                             }
-                            .menuStyle(.borderlessButton)
-                            .menuIndicator(.hidden)
-                            .fixedSize()
-                            .help("Add Project")
+                            .buttonStyle(.borderless)
+                            .help("New Project")
                             .fileImporter(
                                 isPresented: $showFilePicker,
                                 allowedContentTypes: [.folder],
@@ -262,6 +254,8 @@ struct MainView: View {
                     ChatView()
                 }
                 .modifier(ChatDetailModifiers())
+            } else if let preview = windowState.previewCLISession {
+                CLISessionDetailView(preview: preview)
             } else if !windowState.isInitialized {
                 ProgressView()
                     .controlSize(.small)

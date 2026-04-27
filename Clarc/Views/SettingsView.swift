@@ -183,11 +183,11 @@ struct GeneralSettingsTab: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(NSColor.controlBackgroundColor))
+                .background(ClaudeTheme.surfacePrimary)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)
+                        .strokeBorder(ClaudeTheme.border, lineWidth: 0.5)
                 )
                 .contentShape(Rectangle())
             }
@@ -489,7 +489,7 @@ struct TerminalSettingsTab: View {
                             ?? NSFont.monospacedSystemFont(ofSize: CGFloat(appState.terminalFontSize), weight: .regular)))
                         .padding(8)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(NSColor.controlBackgroundColor))
+                        .background(ClaudeTheme.codeBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
 
@@ -548,7 +548,7 @@ private struct ThemePickerRow: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(isHovering ? Color(NSColor.selectedContentBackgroundColor).opacity(0.5) : Color.clear)
+            .background(isHovering ? ClaudeTheme.sidebarItemHover : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 6))
             .contentShape(Rectangle())
         }

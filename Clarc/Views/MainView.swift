@@ -17,6 +17,7 @@ struct MainView: View {
     @State private var projectToRename: Project? = nil
     @State private var renameText: String = ""
     @State private var didSetInitialTab = false
+    @State private var showCommandPalette = false
 
     enum SidebarTab: String, CaseIterable {
         case history = "History"
@@ -88,6 +89,16 @@ struct MainView: View {
                     if !newTabs.contains(sidebarTab.rawValue.lowercased()),
                        let first = visibleTabs.first {
                         sidebarTab = first
+                    }
+                }
+                .onKeyPress(keys: [.init("k")], phases: .down) { press in
+                    guard press.modifiers == .command else { return .ignored }
+                    withAnimation(.easeOut(duration: 0.15)) { showCommandPalette.toggle() }
+                    return .handled
+                }
+                .overlay {
+                    if showCommandPalette {
+                        CommandPalette(isPresented: $showCommandPalette)
                     }
                 }
                 .navigationTitle({

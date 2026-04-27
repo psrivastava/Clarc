@@ -10,6 +10,7 @@ struct ProjectWindowView: View {
     @State private var fileSearchTrigger = false
     @State private var inspectorStarted = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var showCommandPalette = false
 
     var body: some View {
         Group {
@@ -37,6 +38,16 @@ struct ProjectWindowView: View {
                     }
                     .onAppear {
                         windowState.focusMode = appState.focusMode
+                    }
+                    .onKeyPress(keys: [.init("k")], phases: .down) { press in
+                        guard press.modifiers == .command else { return .ignored }
+                        withAnimation(.easeOut(duration: 0.15)) { showCommandPalette.toggle() }
+                        return .handled
+                    }
+                    .overlay {
+                        if showCommandPalette {
+                            CommandPalette(isPresented: $showCommandPalette)
+                        }
                     }
 
                     if inspectorStarted {

@@ -22,8 +22,13 @@ struct PermissionModal: View {
             buttonSection
         }
         .padding(24)
-        .frame(width: 480, height: 380)
+        .frame(width: 500)
+        .frame(minHeight: 280, maxHeight: 560)
         .background(ClaudeTheme.surfaceElevated)
+        .overlay(
+            RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusLarge)
+                .strokeBorder(riskColor.opacity(0.5), lineWidth: 2)
+        )
         .focusable()
         .focused($isFocused)
         .focusEffectDisabled()
@@ -58,6 +63,13 @@ struct PermissionModal: View {
                 Text(request.toolName)
                     .font(.headline)
                     .foregroundStyle(ClaudeTheme.textPrimary)
+
+                Text(LocalizedStringKey(riskLabel))
+                    .font(.caption)
+                    .foregroundStyle(riskColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(riskColor.opacity(0.12), in: Capsule())
             }
 
             Spacer()
@@ -93,7 +105,7 @@ struct PermissionModal: View {
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxHeight: 120)
+            .frame(minHeight: 40, maxHeight: 240)
             .padding(8)
             .background(ClaudeTheme.codeBackground)
             .clipShape(RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusSmall))
@@ -180,6 +192,25 @@ struct PermissionModal: View {
     }
 
     // MARK: - Helpers
+
+    private var riskColor: Color {
+        switch ToolCategory(toolName: request.toolName) {
+        case .readOnly: return ClaudeTheme.statusSuccess
+        case .fileModification: return ClaudeTheme.statusWarning
+        case .execution: return ClaudeTheme.statusError
+        case .mcp, .unknown: return ClaudeTheme.textTertiary
+        }
+    }
+
+    private var riskLabel: String {
+        switch ToolCategory(toolName: request.toolName) {
+        case .readOnly: return "Read Only"
+        case .fileModification: return "File Edit"
+        case .execution: return "Execution"
+        case .mcp: return "MCP"
+        case .unknown: return "Unknown"
+        }
+    }
 
     private func extractString(_ key: String) -> String {
         if let value = request.toolInput[key] {

@@ -69,7 +69,7 @@ struct MainView: View {
                         }
                     }
                 }
-                .id(appState.themeRevision)
+                .animation(.easeInOut(duration: 0.3), value: appState.themeRevision)
                 .onChange(of: windowState.showInspector) { _, isShowing in
                     if isShowing, !inspectorStarted { inspectorStarted = true }
                 }

@@ -28,7 +28,7 @@ struct ProjectWindowView: View {
                         .keyboardShortcut("3", modifiers: .command)
                         .hidden()
                     }
-                    .id(appState.themeRevision)
+                    .animation(.easeInOut(duration: 0.3), value: appState.themeRevision)
                     .navigationTitle(windowState.selectedProject?.name ?? "Project")
                     .onChange(of: windowState.showInspector) { _, isShowing in
                         if isShowing, !inspectorStarted { inspectorStarted = true }

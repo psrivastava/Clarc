@@ -96,7 +96,7 @@ struct HistoryListView: View {
     private var headerRow: some View {
         HStack {
             Text("History")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: ClaudeTheme.size(12), weight: .semibold))
                 .foregroundStyle(ClaudeTheme.textTertiary)
                 .textCase(.uppercase)
 
@@ -122,7 +122,7 @@ struct HistoryListView: View {
                     showAllProjects.toggle()
                 } label: {
                     Image(systemName: showAllProjects ? "tray.2" : "tray")
-                        .font(.system(size: 11))
+                        .font(.system(size: ClaudeTheme.size(11)))
                         .foregroundStyle(showAllProjects ? ClaudeTheme.accent : ClaudeTheme.textTertiary)
                 }
                 .buttonStyle(.borderless)
@@ -133,7 +133,7 @@ struct HistoryListView: View {
                 showDeleteAllAlert = true
             } label: {
                 Image(systemName: "trash")
-                    .font(.system(size: 11))
+                    .font(.system(size: ClaudeTheme.size(11)))
                     .foregroundStyle(ClaudeTheme.textTertiary)
             }
             .buttonStyle(.borderless)
@@ -167,24 +167,24 @@ struct HistoryListView: View {
         return HStack(spacing: 4) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(session.title)
-                    .font(.system(size: 13))
+                    .font(.system(size: ClaudeTheme.size(13)))
                     .foregroundStyle(.primary.opacity(0.8))
                     .lineLimit(1)
 
                 HStack(spacing: 4) {
                     if showAllProjects && !windowState.isProjectWindow, let projectName = session.projectName {
                         Text(projectName)
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: ClaudeTheme.size(10), weight: .medium))
                             .foregroundStyle(ClaudeTheme.accent.opacity(0.8))
                             .lineLimit(1)
 
                         Text("·")
-                            .font(.system(size: 10))
+                            .font(.system(size: ClaudeTheme.size(10)))
                             .foregroundStyle(.tertiary)
                     }
 
                     Text(formattedDate(session.updatedAt))
-                        .font(.system(size: 11))
+                        .font(.system(size: ClaudeTheme.size(11)))
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -199,7 +199,7 @@ struct HistoryListView: View {
 
             if session.isPinned {
                 Image(systemName: "pin.fill")
-                    .font(.system(size: 9))
+                    .font(.system(size: ClaudeTheme.size(9)))
                     .foregroundStyle(ClaudeTheme.textTertiary)
             }
         }
@@ -246,21 +246,12 @@ struct HistoryListView: View {
     private var emptyState: some View {
         VStack(spacing: 8) {
             Spacer()
-            if !searchText.isEmpty {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 20))
-                    .foregroundStyle(ClaudeTheme.textTertiary)
-                Text("No sessions matching \"\(searchText)\"")
-                    .font(.system(size: 13))
-                    .foregroundStyle(ClaudeTheme.textSecondary)
-            } else {
-                Image(systemName: "bubble.left.and.bubble.right")
-                    .font(.system(size: 20))
-                    .foregroundStyle(ClaudeTheme.textTertiary)
-                Text("No chat history")
-                    .font(.system(size: 13))
-                    .foregroundStyle(ClaudeTheme.textSecondary)
-            }
+            Image(systemName: "bubble.left.and.bubble.right")
+                .font(.system(size: ClaudeTheme.size(20)))
+                .foregroundStyle(ClaudeTheme.textTertiary)
+            Text("No chat history")
+                .font(.system(size: ClaudeTheme.size(13)))
+                .foregroundStyle(ClaudeTheme.textSecondary)
             Spacer()
         }
         .frame(maxWidth: .infinity)

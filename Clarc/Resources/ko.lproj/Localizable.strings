@@ -11,6 +11,12 @@
 "Focus Mode" = "집중 모드";
 "Enable Focus Mode" = "집중 모드 활성화";
 "focus.mode.desc" = "스트리밍 중 메시지 버블을 숨기고, 완료된 응답만 히스토리에 표시합니다.";
+"Auto-preview Attachments" = "첨부 파일 자동 미리보기";
+"auto.preview.desc" = "활성화하면 다음 콘텐츠 유형을 붙여넣을 때 자동으로 첨부 파일 미리보기가 생성됩니다. 비활성화하면 일반 텍스트로 삽입됩니다.";
+"URL links" = "URL 링크";
+"File paths" = "파일 경로";
+"Images" = "이미지";
+"Long text (200+ characters)" = "긴 텍스트 (200자 이상)";
 "Shortcuts" = "단축키";
 "Browse and manage Claude Code skills" = "Claude Code 스킬을 탐색하고 관리하세요";
 "Default Model" = "기본 모델";
@@ -19,6 +25,12 @@
 "Used for new sessions. You can override the permission mode per session from the toolbar." = "새 세션의 기본 권한 모드입니다. 툴바에서 세션별로 변경할 수 있습니다.";
 "Default Effort Level" = "기본 작업량 수준 (Effort Level)";
 "Used for new sessions. You can override the effort level per session from the toolbar." = "새 세션의 기본 Effort 수준입니다. 툴바에서 세션별로 변경할 수 있습니다.";
+"Font Size" = "폰트 크기";
+"Interface" = "인터페이스";
+"Messages" = "메시지";
+"Default" = "기본값";
+"Reset" = "초기화";
+"font.size.hint" = "인터페이스와 메시지 폰트 크기를 각각 조절합니다.";
 "Notifications" = "알림";
 "Notify when response completes" = "응답 완료 시 알림";
 "Sends a system notification while Clarc is in the background." = "Clarc가 백그라운드에 있을 때 시스템 알림을 보냅니다.";

@@ -87,6 +87,14 @@ struct MainWindowRoot: View {
             .environment(appState)
             .environment(windowState)
             .environment(chatBridge)
+            .environment(\.openURL, OpenURLAction { url in
+                var finalURL = url
+                if url.scheme == nil || url.scheme!.isEmpty {
+                    finalURL = URL(string: "https://\(url.absoluteString)") ?? url
+                }
+                NSWorkspace.shared.open(finalURL)
+                return .handled
+            })
             .task {
                 await appState.initialize()
                 appState.setupChatBridge(chatBridge, for: windowState)
@@ -126,6 +134,14 @@ struct ProjectWindowRoot: View {
             .environment(appState)
             .environment(windowState)
             .environment(chatBridge)
+            .environment(\.openURL, OpenURLAction { url in
+                var finalURL = url
+                if url.scheme == nil || url.scheme!.isEmpty {
+                    finalURL = URL(string: "https://\(url.absoluteString)") ?? url
+                }
+                NSWorkspace.shared.open(finalURL)
+                return .handled
+            })
             .task {
                 // AppState is already initialized at this point
                 appState.setupChatBridge(chatBridge, for: windowState)

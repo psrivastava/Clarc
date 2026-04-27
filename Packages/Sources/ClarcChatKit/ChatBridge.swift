@@ -18,6 +18,7 @@ public final class ChatBridge {
     public var lastTurnContextUsedPercentage: Double?
     public var modelDisplayName: String = ""
     public var sessionStats: ChatSessionStats = ChatSessionStats()
+    public var autoPreviewSettings: AttachmentAutoPreviewSettings = AttachmentAutoPreviewSettings()
 
     // MARK: - Action Handlers (set up by the app target)
 

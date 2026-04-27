@@ -88,6 +88,44 @@ final class AppState {
     /// Incrementing causes NavigationSplitView to rebuild and immediately apply theme colors
     var themeRevision: Int = 0
 
+    // MARK: - Font Size
+
+    var fontSizeAdjustment: Int = (UserDefaults.standard.object(forKey: "fontSizeAdjustment") as? Int) ?? 0 {
+        didSet {
+            UserDefaults.standard.set(fontSizeAdjustment, forKey: "fontSizeAdjustment")
+            ThemeStore.shared.fontSizeAdjustment = fontSizeAdjustment
+            themeRevision += 1
+        }
+    }
+
+    func increaseFontSize() {
+        guard fontSizeAdjustment < ThemeStore.maxFontSizeAdjustment else { return }
+        fontSizeAdjustment += 1
+    }
+
+    func decreaseFontSize() {
+        guard fontSizeAdjustment > ThemeStore.minFontSizeAdjustment else { return }
+        fontSizeAdjustment -= 1
+    }
+
+    var messageFontSizeAdjustment: Int = (UserDefaults.standard.object(forKey: "messageFontSizeAdjustment") as? Int) ?? 0 {
+        didSet {
+            UserDefaults.standard.set(messageFontSizeAdjustment, forKey: "messageFontSizeAdjustment")
+            ThemeStore.shared.messageFontSizeAdjustment = messageFontSizeAdjustment
+            themeRevision += 1
+        }
+    }
+
+    func increaseMessageFontSize() {
+        guard messageFontSizeAdjustment < ThemeStore.maxFontSizeAdjustment else { return }
+        messageFontSizeAdjustment += 1
+    }
+
+    func decreaseMessageFontSize() {
+        guard messageFontSizeAdjustment > ThemeStore.minFontSizeAdjustment else { return }
+        messageFontSizeAdjustment -= 1
+    }
+
     // MARK: - Model
 
     static let availableModels = ["default", "best", "opus", "opus[1m]", "opusplan", "sonnet", "sonnet[1m]", "haiku"]
@@ -247,6 +285,24 @@ final class AppState {
     /// Decode a Claude Code project directory name back to a filesystem path.
     static func pathFromClaudeProjectDir(_ dirName: String) -> String {
         dirName.replacingOccurrences(of: "-", with: "/")
+    }
+
+    // MARK: - Attachment Auto-Preview Settings
+
+    private static let autoPreviewSettingsKey = "attachmentAutoPreviewSettings"
+
+    var autoPreviewSettings: AttachmentAutoPreviewSettings = {
+        guard let data = UserDefaults.standard.data(forKey: AppState.autoPreviewSettingsKey),
+              let settings = try? JSONDecoder().decode(AttachmentAutoPreviewSettings.self, from: data) else {
+            return AttachmentAutoPreviewSettings()
+        }
+        return settings
+    }() {
+        didSet {
+            if let data = try? JSONEncoder().encode(autoPreviewSettings) {
+                UserDefaults.standard.set(data, forKey: AppState.autoPreviewSettingsKey)
+            }
+        }
     }
 
     /// Pending session to navigate to when a project window opens or is already open.
@@ -426,6 +482,8 @@ final class AppState {
         }
 
         ThemeStore.shared.current = selectedTheme
+        ThemeStore.shared.fontSizeAdjustment = fontSizeAdjustment
+        ThemeStore.shared.messageFontSizeAdjustment = messageFontSizeAdjustment
 
         let binary = await claude.findClaudeBinary()
         claudeInstalled = binary != nil
@@ -556,7 +614,9 @@ final class AppState {
     /// Runs a reactive observation loop: reads AppState + WindowState properties into the bridge,
     /// then re-registers after each change. Stops when the bridge or window is deallocated.
     private func startBridgeObservation(_ bridge: ChatBridge, for window: WindowState) {
-        func observe() {
+        // Streaming state and global settings are observed in separate loops so that frequent
+        // streaming updates don't trigger settings re-pushes (and vice versa).
+        func observeStream() {
             withObservationTracking {
                 let state = streamState(in: window)
                 bridge.messages = state.messages
@@ -575,10 +635,18 @@ final class AppState {
                     turns: state.turns
                 )
             } onChange: {
-                Task { @MainActor in observe() }
+                Task { @MainActor in observeStream() }
             }
         }
-        Task { @MainActor in observe() }
+        func observeSettings() {
+            withObservationTracking {
+                bridge.autoPreviewSettings = self.autoPreviewSettings
+            } onChange: {
+                Task { @MainActor in observeSettings() }
+            }
+        }
+        Task { @MainActor in observeStream() }
+        Task { @MainActor in observeSettings() }
     }
 
     // MARK: - Edit & Resend
@@ -1107,7 +1175,8 @@ final class AppState {
                     if isFg {
                         window.currentSessionId = resultEvent.sessionId
                         if resultEvent.isError {
-                            addErrorMessage("Claude returned an error.", in: window)
+                            let errText = await claude.consumeStderr(for: streamId) ?? "Claude returned an error."
+                            addErrorMessage(errText, in: window)
                         }
                     }
 
@@ -1170,13 +1239,17 @@ final class AppState {
             let elapsed = Date().timeIntervalSince(streamStart)
             logger.info("[Stream:UI] stream ended after \(eventCount) events, \(String(format: "%.1f", elapsed))s total")
 
+            // Consume any remaining stderr — used as error message content below.
+            // If already consumed at result.isError time, this returns nil.
+            let stderrOutput = await claude.consumeStderr(for: streamId)
+
             if eventCount == 0 {
-                let stderrOutput = await claude.consumeStderr(for: streamId)
                 // User cancellation revokes activeStreamId or cancels the task — distinguish
                 // that from a real "CLI died with no output" failure.
                 let wasCancelled = Task.isCancelled || stateForSession(sessionKey).activeStreamId != streamId
                 if !wasCancelled {
-                    addErrorMessage("No response received", in: window)
+                    let errorMsg = stderrOutput ?? "No response received"
+                    addErrorMessage(errorMsg, in: window)
                     logger.error("[Stream:UI] no events received — appending error bubble. stderr=\(stderrOutput ?? "nil")")
                 } else {
                     logger.debug("[Stream:UI] no events received — suppressed (cancelled). stderr=\(stderrOutput ?? "nil")")
@@ -1188,6 +1261,18 @@ final class AppState {
             if stillStreaming && isStillOwner {
                 logger.warning("[Stream:UI] isStreaming was still true at stream end — forcing cleanup")
                 finalizeStreamSession(for: sessionKey)
+
+                // If the last assistant message is invisible after cleanup (blocks=[] because
+                // all tool calls had empty/nil results), show an error bubble so the user
+                // understands what happened rather than seeing no response at all.
+                let lastMsg = stateForSession(sessionKey).messages.last
+                if lastMsg.map({ $0.role == .assistant && $0.blocks.isEmpty }) == true {
+                    let errorMsg = stderrOutput ?? "Response was interrupted"
+                    updateState(sessionKey) { state in
+                        state.messages.append(ChatMessage(role: .assistant, content: errorMsg, isError: true))
+                    }
+                }
+
                 let msgs = stateForSession(sessionKey).messages
                 if !msgs.isEmpty {
                     await saveSession(sessionId: sessionKey, projectId: projectId, messages: msgs)

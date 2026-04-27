@@ -73,14 +73,6 @@ struct MarkdownContentView: View {
                 }
             }
         }
-        .environment(\.openURL, OpenURLAction { url in
-            var finalURL = url
-            if url.scheme == nil || url.scheme!.isEmpty {
-                finalURL = URL(string: "https://\(url.absoluteString)") ?? url
-            }
-            NSWorkspace.shared.open(finalURL)
-            return .handled
-        })
         .onChange(of: text) { _, newText in
             guard newText != cachedText else { return }
             cachedText = newText
@@ -654,7 +646,7 @@ private struct MarkdownTableView: View {
 
     private func cellView(text: String, isHeader: Bool, colIndex: Int) -> some View {
         Text(parseInlineMarkdown(text))
-            .font(.system(size: 14, weight: isHeader ? .semibold : .regular))
+            .font(.system(size: ClaudeTheme.messageSize(14), weight: isHeader ? .semibold : .regular))
             .foregroundStyle(ClaudeTheme.textPrimary)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -682,7 +674,7 @@ struct CodeBlockView: View {
             HStack {
                 if !language.isEmpty {
                     Text(language)
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .font(.system(size: ClaudeTheme.messageSize(11), weight: .medium, design: .monospaced))
                         .foregroundStyle(ClaudeTheme.textTertiary)
                 }
 

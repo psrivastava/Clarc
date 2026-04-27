@@ -20,6 +20,9 @@ Native macOS desktop client for Claude Code.
 
 ![Clarc Screenshot](docs/screenshot.png)
 
+psrivastava fork
+![Enhancements on this fork](docs/screenshot-psrivastava.jpg)
+
 ---
 
 ## Features

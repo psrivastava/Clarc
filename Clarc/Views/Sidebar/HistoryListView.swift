@@ -8,12 +8,49 @@ struct HistoryListView: View {
     @State private var renameText = ""
     @State private var showAllProjects = true
     @State private var showDeleteAllAlert = false
+    @State private var isSearching = false
+    @State private var searchText = ""
+    @FocusState private var isSearchFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             headerRow
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
+
+            if isSearching {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ClaudeTheme.textTertiary)
+                    TextField("Search sessions...", text: $searchText)
+                        .font(.system(size: 12))
+                        .textFieldStyle(.plain)
+                        .focused($isSearchFocused)
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(ClaudeTheme.textTertiary)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(ClaudeTheme.inputBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .padding(.horizontal, 8)
+                .padding(.bottom, 4)
+                .onExitCommand {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        isSearching = false
+                        searchText = ""
+                    }
+                }
+            }
 
             if sessions.isEmpty {
                 emptyState
@@ -64,6 +101,20 @@ struct HistoryListView: View {
                 .textCase(.uppercase)
 
             Spacer()
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isSearching.toggle()
+                    if isSearching { isSearchFocused = true }
+                    else { searchText = "" }
+                }
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 11))
+                    .foregroundStyle(isSearching ? ClaudeTheme.accent : ClaudeTheme.textTertiary)
+            }
+            .buttonStyle(.borderless)
+            .help("Search Sessions")
 
             // No need to toggle all/current in the project window
             if !windowState.isProjectWindow {
@@ -195,12 +246,21 @@ struct HistoryListView: View {
     private var emptyState: some View {
         VStack(spacing: 8) {
             Spacer()
-            Image(systemName: "bubble.left.and.bubble.right")
-                .font(.system(size: 20))
-                .foregroundStyle(ClaudeTheme.textTertiary)
-            Text("No chat history")
-                .font(.system(size: 13))
-                .foregroundStyle(ClaudeTheme.textSecondary)
+            if !searchText.isEmpty {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 20))
+                    .foregroundStyle(ClaudeTheme.textTertiary)
+                Text("No sessions matching \"\(searchText)\"")
+                    .font(.system(size: 13))
+                    .foregroundStyle(ClaudeTheme.textSecondary)
+            } else {
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.system(size: 20))
+                    .foregroundStyle(ClaudeTheme.textTertiary)
+                Text("No chat history")
+                    .font(.system(size: 13))
+                    .foregroundStyle(ClaudeTheme.textSecondary)
+            }
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -219,11 +279,15 @@ struct HistoryListView: View {
     }
 
     private var sessions: [DisplaySession] {
+        let base: [DisplaySession]
         if windowState.isProjectWindow || !showAllProjects {
-            return currentProjectSessions
+            base = currentProjectSessions
         } else {
-            return allProjectSessions
+            base = allProjectSessions
         }
+        guard !searchText.isEmpty else { return base }
+        let query = searchText.lowercased()
+        return base.filter { $0.title.lowercased().contains(query) }
     }
 
     private static func sessionOrder(

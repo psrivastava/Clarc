@@ -28,6 +28,16 @@ struct OnboardingView: View {
 
             Spacer()
 
+            HStack(spacing: 8) {
+                ForEach(0..<2, id: \.self) { i in
+                    Circle()
+                        .fill(i == step ? ClaudeTheme.accent : ClaudeTheme.textTertiary.opacity(0.3))
+                        .frame(width: 8, height: 8)
+                        .animation(.easeInOut(duration: 0.2), value: step)
+                }
+            }
+            .padding(.bottom, 16)
+
             navigationButtons
                 .padding(.bottom, 24)
         }

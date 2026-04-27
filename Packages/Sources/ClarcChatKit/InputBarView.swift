@@ -211,7 +211,8 @@ struct InputBarView: View {
                 windowState.inputText = oldValue
                 return
             }
-            if inserted.count >= AttachmentFactory.longTextThreshold {
+            if chatBridge.autoPreviewSettings.longText,
+               inserted.count >= AttachmentFactory.longTextThreshold {
                 windowState.addAttachment(AttachmentFactory.fromLongText(inserted))
                 windowState.inputText = oldValue
                 return
@@ -308,13 +309,17 @@ struct InputBarView: View {
         guard press.modifiers == .command else { return .ignored }
         let pb = NSPasteboard.general
 
-        if let attachment = imageAttachmentFromPasteboard(pb) {
-            windowState.addAttachment(attachment)
+        if imageAttachmentFromPasteboard(pb) != nil {
+            if chatBridge.autoPreviewSettings.image,
+               let attachment = imageAttachmentFromPasteboard(pb) {
+                windowState.addAttachment(attachment)
+            }
             return .handled
         }
 
         if let url = (pb.readObjects(forClasses: [NSURL.self]) as? [URL])?.first(where: \.isFileURL) {
-            if let attachment = AttachmentFactory.fromFileURL(url) {
+            if chatBridge.autoPreviewSettings.filePath,
+               let attachment = AttachmentFactory.fromFileURL(url) {
                 windowState.addAttachment(attachment)
             } else {
                 insertAtCursor(url.path)
@@ -329,7 +334,8 @@ struct InputBarView: View {
             return .handled
         }
 
-        if text.count >= AttachmentFactory.longTextThreshold {
+        if chatBridge.autoPreviewSettings.longText,
+           text.count >= AttachmentFactory.longTextThreshold {
             windowState.addAttachment(AttachmentFactory.fromLongText(text))
             return .handled
         }
@@ -341,10 +347,12 @@ struct InputBarView: View {
     private func attachmentFromPastedText(_ text: String) -> Attachment? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return nil }
-        if let attachment = attachmentFromPathText(trimmed) {
+        if chatBridge.autoPreviewSettings.filePath,
+           let attachment = attachmentFromPathText(trimmed) {
             return attachment
         }
-        if !trimmed.contains(" "), !trimmed.contains("\n"),
+        if chatBridge.autoPreviewSettings.url,
+           !trimmed.contains(" "), !trimmed.contains("\n"),
            let url = URL(string: trimmed),
            let scheme = url.scheme, ["http", "https"].contains(scheme),
            url.host != nil {

@@ -452,7 +452,7 @@ struct ChatSettingsTab: View {
             Text("Auto-preview Attachments")
                 .font(.system(size: ClaudeTheme.size(13), weight: .semibold))
 
-            Text("When enabled, pasting the following content types automatically creates an attachment preview. When disabled, the content is inserted as plain text (images are silently skipped, as they have no text representation).")
+            Text("auto.preview.desc")
                 .font(.system(size: ClaudeTheme.size(11)))
                 .foregroundStyle(.secondary)
 

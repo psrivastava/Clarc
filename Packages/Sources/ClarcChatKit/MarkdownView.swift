@@ -73,14 +73,6 @@ struct MarkdownContentView: View {
                 }
             }
         }
-        .environment(\.openURL, OpenURLAction { url in
-            var finalURL = url
-            if url.scheme == nil || url.scheme!.isEmpty {
-                finalURL = URL(string: "https://\(url.absoluteString)") ?? url
-            }
-            NSWorkspace.shared.open(finalURL)
-            return .handled
-        })
         .onChange(of: text) { _, newText in
             guard newText != cachedText else { return }
             cachedText = newText

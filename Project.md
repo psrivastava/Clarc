@@ -101,3 +101,18 @@ Standalone view — reads directly from `~/.claude/projects/` and `~/.claude/his
 - SwiftTerm requires Metal Toolchain (`xcodebuild -downloadComponent MetalToolchain` on first build)
 - `@Observable` macro fails with xcodeproj-generated projects on Xcode 26 beta — upstream uses it, so don't change
 - CLI session import uses file modification date as session date (creation date not available in JSONL)
+
+## Merge History
+
+### 2026-04-27 — Merge origin/main (v1.2.0) into psrivastava (`3d522e7`)
+
+Resolved 4 conflicts:
+
+| File | Resolution | Details |
+|------|-----------|---------|
+| `AppState.swift` | Kept both | Fork's terminal/sidebar settings + upstream's attachment auto-preview settings |
+| `MainView.swift` | Kept theirs + fork addition | Upstream's `ClaudeTheme.size()` scaled sizing + fork's `Spacer()`, removed duplicate sparkle icon |
+| `SettingsView.swift` | Kept both | Fork's sidebar section (default tab, visible tabs) + upstream's font size section (interface/message steppers) + `fontStepButton` helper |
+| `HistoryListView.swift` | Kept theirs | Upstream's scaled sizing with simple empty state (fork's search-aware empty state dropped) |
+
+**Strategy:** Independent features → keep both. Design/layout changes → prefer upstream's newer scaled sizing, preserve useful fork additions (Spacer). Critical fix: ensure proper brace closure when combining sections (sidebarSection needs 3 closing braces before fontSizeSection).

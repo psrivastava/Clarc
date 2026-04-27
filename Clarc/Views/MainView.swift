@@ -206,6 +206,7 @@ struct MainView: View {
                     }
                 }
             }
+            .scrollFadeEdges(backgroundColor: ClaudeTheme.surfaceElevated)
 
             Spacer()
 

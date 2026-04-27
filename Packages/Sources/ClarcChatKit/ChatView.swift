@@ -68,6 +68,7 @@ public struct ChatView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
         }
+        .scrollFadeEdges(backgroundColor: ClaudeTheme.surfaceElevated)
         .background(ClaudeTheme.surfaceElevated)
     }
 

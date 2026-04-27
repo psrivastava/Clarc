@@ -76,17 +76,24 @@ struct CLISessionsView: View {
                         cliSessionRow(session, projectPath: project.path)
                     }
                 } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "terminal")
-                            .font(.system(size: 10))
-                            .foregroundStyle(ClaudeTheme.accent)
-                        Text(project.displayName)
-                            .font(.system(size: 13, weight: .medium))
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "terminal")
+                                .font(.system(size: 10))
+                                .foregroundStyle(ClaudeTheme.accent)
+                            Text(project.displayName)
+                                .font(.system(size: 13, weight: .medium))
+                                .lineLimit(1)
+                            Spacer()
+                            Text("\(project.sessions.count)")
+                                .font(.system(size: 11))
+                                .foregroundStyle(ClaudeTheme.textTertiary)
+                        }
+                        Text(project.path)
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary.opacity(0.6))
                             .lineLimit(1)
-                        Spacer()
-                        Text("\(project.sessions.count)")
-                            .font(.system(size: 11))
-                            .foregroundStyle(ClaudeTheme.textTertiary)
+                            .truncationMode(.head)
                     }
                 }
             }

@@ -32,6 +32,7 @@ public struct ChatMessage: Identifiable, Codable, Sendable, Equatable {
     public var duration: TimeInterval?
     public var isError: Bool
     public var isCompactBoundary: Bool
+    public var isBookmarked: Bool
 
     public init(
         id: UUID = UUID(),
@@ -44,7 +45,8 @@ public struct ChatMessage: Identifiable, Codable, Sendable, Equatable {
         attachments: [Attachment] = [],
         duration: TimeInterval? = nil,
         isError: Bool = false,
-        isCompactBoundary: Bool = false
+        isCompactBoundary: Bool = false,
+        isBookmarked: Bool = false
     ) {
         self.id = id
         self.role = role
@@ -64,12 +66,13 @@ public struct ChatMessage: Identifiable, Codable, Sendable, Equatable {
         self.duration = duration
         self.isError = isError
         self.isCompactBoundary = isCompactBoundary
+        self.isBookmarked = isBookmarked
     }
 
     // MARK: - Codable
 
     private enum CodingKeys: String, CodingKey {
-        case id, role, blocks, isStreaming, isResponseComplete, timestamp, attachmentPaths, duration, isError, isCompactBoundary
+        case id, role, blocks, isStreaming, isResponseComplete, timestamp, attachmentPaths, duration, isError, isCompactBoundary, isBookmarked
         case content, toolCalls
     }
 
@@ -84,6 +87,7 @@ public struct ChatMessage: Identifiable, Codable, Sendable, Equatable {
         duration = try container.decodeIfPresent(TimeInterval.self, forKey: .duration)
         isError = try container.decodeIfPresent(Bool.self, forKey: .isError) ?? false
         isCompactBoundary = try container.decodeIfPresent(Bool.self, forKey: .isCompactBoundary) ?? false
+        isBookmarked = try container.decodeIfPresent(Bool.self, forKey: .isBookmarked) ?? false
 
         if let decodedBlocks = try container.decodeIfPresent([MessageBlock].self, forKey: .blocks) {
             blocks = decodedBlocks
@@ -114,6 +118,7 @@ public struct ChatMessage: Identifiable, Codable, Sendable, Equatable {
         try container.encodeIfPresent(duration, forKey: .duration)
         if isError { try container.encode(isError, forKey: .isError) }
         if isCompactBoundary { try container.encode(isCompactBoundary, forKey: .isCompactBoundary) }
+        if isBookmarked { try container.encode(isBookmarked, forKey: .isBookmarked) }
     }
 
     // MARK: - Convenience Accessors

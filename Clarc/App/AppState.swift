@@ -545,6 +545,10 @@ final class AppState {
         bridge.fetchRateLimitHandler = {
             await RateLimitService.shared.fetchUsage()
         }
+        bridge.toggleBookmarkHandler = { [weak self, weak window] messageId in
+            guard let self, let window else { return }
+            await self.toggleBookmark(messageId: messageId, in: window)
+        }
 
         startBridgeObservation(bridge, for: window)
     }
@@ -1945,6 +1949,17 @@ final class AppState {
         updated.isPinned = newIsPinned
         do { try await persistence.saveSession(updated) }
         catch { logger.error("Failed to save pinned session: \(error.localizedDescription)") }
+    }
+
+    func toggleBookmark(messageId: UUID, in window: WindowState) async {
+        let key = window.currentSessionId ?? window.newSessionKey
+        guard var state = sessionStates[key] else { return }
+        guard let index = state.messages.firstIndex(where: { $0.id == messageId }) else { return }
+        state.messages[index].isBookmarked.toggle()
+        sessionStates[key] = state
+        if let project = window.selectedProject {
+            await saveSession(sessionId: key, projectId: project.id, messages: state.messages)
+        }
     }
 
     func renameProject(_ project: Project, to newName: String) async {

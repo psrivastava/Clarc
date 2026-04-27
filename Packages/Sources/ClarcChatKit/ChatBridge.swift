@@ -27,6 +27,7 @@ public final class ChatBridge {
     public var runTerminalCommandHandler: ((String) async -> Void)?
     public var editAndResendHandler: ((UUID, String) async -> Void)?
     public var fetchRateLimitHandler: (() async -> RateLimitUsage?)?
+    public var toggleBookmarkHandler: (@MainActor @Sendable (UUID) async -> Void)?
 
     // MARK: - Init
 
@@ -56,5 +57,9 @@ public final class ChatBridge {
 
     public func fetchRateLimit() async -> RateLimitUsage? {
         await fetchRateLimitHandler?()
+    }
+
+    public func toggleBookmark(messageId: UUID) async {
+        await toggleBookmarkHandler?(messageId)
     }
 }

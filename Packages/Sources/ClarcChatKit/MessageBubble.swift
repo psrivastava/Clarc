@@ -260,9 +260,26 @@ struct MessageBubble: View {
         .bubbleStyle(.assistant)
         .overlay(alignment: .bottomTrailing) {
             if hoveredBlockId == blockId && !message.isStreaming {
-                copyButton(for: text)
-                    .padding(6)
-                    .transition(.opacity.animation(.easeInOut(duration: 0.15)))
+                HStack(spacing: 4) {
+                    Button {
+                        Task { await chatBridge.toggleBookmark(messageId: message.id) }
+                    } label: {
+                        Image(systemName: message.isBookmarked ? "bookmark.fill" : "bookmark")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(message.isBookmarked ? ClaudeTheme.accent : ClaudeTheme.textSecondary)
+                            .frame(width: 26, height: 26)
+                            .background(ClaudeTheme.surfaceSecondary, in: RoundedRectangle(cornerRadius: 6))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .strokeBorder(ClaudeTheme.border, lineWidth: 0.5)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .help(message.isBookmarked ? "Remove Bookmark" : "Bookmark")
+                    copyButton(for: text)
+                }
+                .padding(6)
+                .transition(.opacity.animation(.easeInOut(duration: 0.15)))
             }
         }
         .onHover { hoveredBlockId = $0 ? blockId : nil }

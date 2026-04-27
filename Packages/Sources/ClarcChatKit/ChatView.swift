@@ -15,6 +15,10 @@ public struct ChatView: View {
                 shortcutBar
             }
 
+            if let contextPct = chatBridge.lastTurnContextUsedPercentage, contextPct > 0 {
+                ContextProgressBar(percentage: min(contextPct, 100))
+            }
+
             messageScrollView
 
             InputBarView()
@@ -86,5 +90,29 @@ public struct ChatView: View {
 
     private var messageScrollView: some View {
         MessageListView(onTapBackground: { windowState.requestInputFocus = true })
+    }
+}
+
+struct ContextProgressBar: View {
+    let percentage: Double
+
+    private var barColor: Color {
+        if percentage >= 90 { return ClaudeTheme.statusError }
+        if percentage >= 70 { return ClaudeTheme.statusWarning }
+        return ClaudeTheme.accent
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(ClaudeTheme.border.opacity(0.3))
+                Rectangle()
+                    .fill(barColor)
+                    .frame(width: geo.size.width * min(percentage / 100, 1.0))
+                    .animation(.easeInOut(duration: 0.5), value: percentage)
+            }
+        }
+        .frame(height: 2)
     }
 }

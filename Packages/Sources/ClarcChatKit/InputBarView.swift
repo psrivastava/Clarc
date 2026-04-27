@@ -16,8 +16,7 @@ struct InputBarView: View {
     @State private var showAtFilePopup = false
     @State private var atFileSelectedIndex = 0
     @State private var historyIndex: Int = -1
-    @State private var pendingSend = false
-    @State private var pendingNewline = false
+    @State private var inputHasMarkedText = false
     @State private var textFieldLayoutID = 0
     @State private var queuePreviewHeight: CGFloat = 0
     @State private var measuredInputHeight: CGFloat = 20
@@ -162,6 +161,7 @@ struct InputBarView: View {
             if !showSlashPopup {
                 ClaudeSendButton(
                     isEnabled: !windowState.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        || inputHasMarkedText
                         || !windowState.attachments.isEmpty,
                     action: sendMessage
                 )
@@ -184,6 +184,10 @@ struct InputBarView: View {
                 .onChange(of: windowState.inputText) { oldValue, newValue in
                     handleInputTextChange(oldValue: oldValue, newValue: newValue)
                 }
+                .onKeyPress(phases: .down) { _ in
+                    refreshMarkedTextStateSoon()
+                    return .ignored
+                }
                 .onKeyPress(.return, phases: .down) { handleReturnKey($0) }
                 .onKeyPress(.upArrow, phases: .down) { _ in handleUpArrow() }
                 .onKeyPress(.downArrow, phases: .down) { _ in handleDownArrow() }
@@ -192,7 +196,7 @@ struct InputBarView: View {
                 .onKeyPress(.escape, phases: .down) { _ in handleEscapeKey() }
                 .id(textFieldLayoutID)
 
-            if windowState.inputText.isEmpty {
+            if windowState.inputText.isEmpty && !inputHasMarkedText {
                 Text("Type a message...", bundle: .module)
                     .font(.system(size: ClaudeTheme.size(14)))
                     .foregroundStyle(.secondary)
@@ -244,16 +248,7 @@ struct InputBarView: View {
         }
         if shouldShowAt { atFileSelectedIndex = 0 }
 
-        if pendingSend {
-            pendingSend = false
-            sendMessage()
-        }
-        if pendingNewline {
-            pendingNewline = false
-            Task { @MainActor in
-                windowState.inputText.append("\n")
-            }
-        }
+        refreshMarkedTextState()
     }
 
     private func handleUpArrow() -> KeyPress.Result {
@@ -459,6 +454,7 @@ struct InputBarView: View {
     // Recreate the text field to reset IME state; prevents ghost Hangul leaking into the next input.
     private func resetIMEState() {
         textFieldLayoutID += 1
+        inputHasMarkedText = false
         DispatchQueue.main.async { isInputFocused = true }
     }
 
@@ -621,6 +617,9 @@ struct InputBarView: View {
     // MARK: - Send / Return
 
     private func sendMessage() {
+        if hasMarkedText() {
+            commitMarkedText()
+        }
         guard !windowState.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 || !windowState.attachments.isEmpty else { return }
         historyIndex = -1
@@ -648,11 +647,13 @@ struct InputBarView: View {
 
     private func handleReturnKey(_ keyPress: KeyPress) -> KeyPress.Result {
         if keyPress.modifiers.contains(.shift) {
-            // Mirror the plain-Enter IME path: commit composing Hangul first, then append \n
-            // once the committed text has propagated to inputText via onChange.
-            if NSTextInputContext.current?.client.hasMarkedText() == true {
-                NSTextInputContext.current?.client.unmarkText()
-                pendingNewline = true
+            // Commit composing Hangul before inserting the newline so the final syllable is kept.
+            if hasMarkedText() {
+                commitMarkedText()
+                Task { @MainActor in
+                    syncInputTextFromActiveEditor()
+                    windowState.inputText.append("\n")
+                }
                 return .handled
             }
             windowState.inputText.append("\n")
@@ -677,16 +678,48 @@ struct InputBarView: View {
             }
             return .handled
         }
-        // If IME is composing (e.g. last Korean character), commit with unmarkText().
-        // Return .handled instead of .ignored to prevent NSTextField "end editing" behavior (select all).
-        // After commit, onChange fires and pendingSend flag triggers auto-send.
-        if NSTextInputContext.current?.client.hasMarkedText() == true {
-            NSTextInputContext.current?.client.unmarkText()
-            pendingSend = true
+        // Commit composing Hangul before sending; SwiftUI's binding can lag behind NSTextView.
+        if hasMarkedText() {
+            commitMarkedText()
+            Task { @MainActor in
+                syncInputTextFromActiveEditor()
+                sendMessage()
+            }
             return .handled
         }
         sendMessage()
         return .handled
+    }
+
+    private func hasMarkedText() -> Bool {
+        NSTextInputContext.current?.client.hasMarkedText() == true
+    }
+
+    private func refreshMarkedTextState() {
+        let markedTextActive = hasMarkedText()
+        if inputHasMarkedText != markedTextActive {
+            inputHasMarkedText = markedTextActive
+        }
+    }
+
+    private func refreshMarkedTextStateSoon() {
+        Task { @MainActor in
+            refreshMarkedTextState()
+        }
+    }
+
+    private func commitMarkedText() {
+        NSTextInputContext.current?.client.unmarkText()
+        syncInputTextFromActiveEditor()
+        refreshMarkedTextState()
+    }
+
+    private func syncInputTextFromActiveEditor() {
+        guard let editor = NSApp.keyWindow?.firstResponder as? NSText else { return }
+        let text = editor.string
+        if windowState.inputText != text {
+            windowState.inputText = text
+        }
     }
 
     // MARK: - Paste & File Import

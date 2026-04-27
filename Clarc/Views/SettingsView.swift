@@ -335,6 +335,8 @@ struct ChatSettingsTab: View {
                 effortSection
                 Divider()
                 focusModeSection
+                Divider()
+                autoPreviewSection
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -439,6 +441,46 @@ struct ChatSettingsTab: View {
             }
             .toggleStyle(.switch)
             .fixedSize()
+        }
+    }
+
+    // MARK: - Auto-Preview Attachments Section
+
+    private var autoPreviewSection: some View {
+        @Bindable var appState = appState
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Auto-preview Attachments")
+                .font(.system(size: ClaudeTheme.size(13), weight: .semibold))
+
+            Text("When enabled, pasting the following content types automatically creates an attachment preview. When disabled, the content is inserted as plain text.")
+                .font(.system(size: ClaudeTheme.size(11)))
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle(isOn: $appState.autoPreviewSettings.url) {
+                    Text("URL links")
+                }
+                .toggleStyle(.switch)
+                .fixedSize()
+
+                Toggle(isOn: $appState.autoPreviewSettings.filePath) {
+                    Text("File paths")
+                }
+                .toggleStyle(.switch)
+                .fixedSize()
+
+                Toggle(isOn: $appState.autoPreviewSettings.image) {
+                    Text("Images")
+                }
+                .toggleStyle(.switch)
+                .fixedSize()
+
+                Toggle(isOn: $appState.autoPreviewSettings.longText) {
+                    Text("Long text (200+ characters)")
+                }
+                .toggleStyle(.switch)
+                .fixedSize()
+            }
         }
     }
 

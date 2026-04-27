@@ -3,6 +3,7 @@ import ClarcCore
 
 struct OnboardingView: View {
     @Environment(AppState.self) private var appState
+    @State private var step = 0
     @State private var isCheckingCLI = false
     @State private var cliInstalled = false
     @State private var cliVersion: String?
@@ -12,8 +13,18 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            cliCheckStep
-                .frame(maxWidth: 460)
+            Group {
+                switch step {
+                case 0: welcomeStep
+                case 1: cliCheckStep
+                default: cliCheckStep
+                }
+            }
+            .frame(maxWidth: 460)
+            .transition(.asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
+            ))
 
             Spacer()
 
@@ -21,10 +32,34 @@ struct OnboardingView: View {
                 .padding(.bottom, 24)
         }
         .padding(.horizontal, 40)
-        .frame(width: 560, height: 420)
+        .frame(width: 560, height: 480)
         .background(ClaudeTheme.background)
-        .task {
-            await checkCLI()
+    }
+
+    // MARK: - Welcome
+
+    private var welcomeStep: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "sparkle")
+                .font(.system(size: 56))
+                .foregroundStyle(ClaudeTheme.accent)
+
+            VStack(spacing: 8) {
+                Text("Welcome to Clarc")
+                    .font(.title.weight(.bold))
+                    .foregroundStyle(ClaudeTheme.textPrimary)
+                Text("A native macOS client for Claude Code CLI")
+                    .font(.body)
+                    .foregroundStyle(ClaudeTheme.textSecondary)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                FeatureRow(icon: "bubble.left.and.text.bubble.right", title: "Chat with Claude", description: "Send messages and review AI-generated code")
+                FeatureRow(icon: "folder.fill", title: "Project Management", description: "Switch between projects with tabbed interface")
+                FeatureRow(icon: "terminal", title: "Built-in Terminal", description: "Run commands without leaving the app")
+                FeatureRow(icon: "lock.shield", title: "Permission Control", description: "Review and approve tool actions before execution")
+            }
+            .padding(16)
         }
     }
 
@@ -63,7 +98,6 @@ struct OnboardingView: View {
                         Text("Install command:")
                             .font(.subheadline)
                             .foregroundStyle(ClaudeTheme.textSecondary)
-
                         HStack {
                             Text("npm install -g @anthropic-ai/claude-code")
                                 .font(.system(.body, design: .monospaced))
@@ -72,13 +106,9 @@ struct OnboardingView: View {
                                 .padding(8)
                                 .background(ClaudeTheme.codeBackground)
                                 .clipShape(RoundedRectangle(cornerRadius: 6))
-
                             Button {
                                 NSPasteboard.general.clearContents()
-                                NSPasteboard.general.setString(
-                                    "npm install -g @anthropic-ai/claude-code",
-                                    forType: .string
-                                )
+                                NSPasteboard.general.setString("npm install -g @anthropic-ai/claude-code", forType: .string)
                             } label: {
                                 Image(systemName: "doc.on.doc")
                                     .foregroundStyle(ClaudeTheme.textSecondary)
@@ -96,18 +126,36 @@ struct OnboardingView: View {
                 .padding(.top, 4)
             }
         }
+        .task {
+            await checkCLI()
+        }
     }
 
     // MARK: - Navigation
 
     private var navigationButtons: some View {
         HStack {
-            Spacer()
-            Button("Get Started") {
-                appState.skipGitHubLogin()
+            if step > 0 {
+                Button("Back") {
+                    withAnimation(.easeInOut(duration: 0.3)) { step -= 1 }
+                }
+                .buttonStyle(ClaudeSecondaryButtonStyle())
             }
-            .buttonStyle(ClaudeAccentButtonStyle())
-            .disabled(!cliInstalled)
+
+            Spacer()
+
+            if step == 0 {
+                Button("Continue") {
+                    withAnimation(.easeInOut(duration: 0.3)) { step = 1 }
+                }
+                .buttonStyle(ClaudeAccentButtonStyle())
+            } else {
+                Button("Get Started") {
+                    appState.skipGitHubLogin()
+                }
+                .buttonStyle(ClaudeAccentButtonStyle())
+                .disabled(!cliInstalled)
+            }
         }
     }
 
@@ -116,7 +164,6 @@ struct OnboardingView: View {
     private func checkCLI() async {
         isCheckingCLI = true
         cliError = nil
-
         do {
             let version = try await appState.claude.checkVersion()
             cliVersion = version
@@ -125,7 +172,6 @@ struct OnboardingView: View {
         } catch {
             cliInstalled = false
             cliError = error.localizedDescription
-
             let binary = await appState.claude.findClaudeBinary()
             if let binary {
                 cliError = "Binary found: \(binary), but version check failed"
@@ -133,10 +179,33 @@ struct OnboardingView: View {
                 appState.claudeInstalled = true
             }
         }
-
         isCheckingCLI = false
     }
+}
 
+// MARK: - Feature Row
+
+private struct FeatureRow: View {
+    let icon: String
+    let title: String
+    let description: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundStyle(ClaudeTheme.accent)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(ClaudeTheme.textPrimary)
+                Text(description)
+                    .font(.system(size: 12))
+                    .foregroundStyle(ClaudeTheme.textSecondary)
+            }
+        }
+    }
 }
 
 #Preview {

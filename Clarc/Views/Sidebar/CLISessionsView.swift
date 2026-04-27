@@ -14,6 +14,18 @@ struct CLISessionsView: View {
     @State private var expandedProjects: Set<String> = []
     @State private var sessionTitles: [String: String] = [:]
     @State private var isLoading = true
+    @State private var focusedItem: FocusItem?
+
+    private var visibleItems: [FocusItem] {
+        var items: [FocusItem] = []
+        for project in cliProjects {
+            items.append(.folder(project.id))
+            if expandedProjects.contains(project.id) {
+                items.append(contentsOf: project.sessions.map { .session($0.id) })
+            }
+        }
+        return items
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -120,6 +132,12 @@ struct CLISessionsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(focusedItem == .session(session.id) ? ClaudeTheme.accent.opacity(0.15) : .clear)
+                .padding(.horizontal, -4)
+        )
+        .onTapGesture { focusedItem = .session(session.id) }
         .contextMenu {
             Button {
                 resumeCLISession(session, projectPath: projectPath)
@@ -168,6 +186,53 @@ struct CLISessionsView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Keyboard Navigation
+
+    private func moveFocus(_ delta: Int) {
+        let items = visibleItems
+        guard !items.isEmpty else { return }
+        guard let current = focusedItem, let idx = items.firstIndex(of: current) else {
+            focusedItem = items.first
+            return
+        }
+        let next = idx + delta
+        guard items.indices.contains(next) else { return }
+        focusedItem = items[next]
+    }
+
+    private func expandFocused() {
+        guard case .folder(let id) = focusedItem else { return }
+        expandedProjects.insert(id)
+    }
+
+    private func collapseFocused() {
+        switch focusedItem {
+        case .folder(let id):
+            expandedProjects.remove(id)
+        case .session(let sid):
+            // Find parent folder and collapse it, move focus to folder
+            if let project = cliProjects.first(where: { $0.sessions.contains { $0.id == sid } }) {
+                expandedProjects.remove(project.id)
+                focusedItem = .folder(project.id)
+            }
+        case .none: break
+        }
+    }
+
+    private func activateFocused() {
+        switch focusedItem {
+        case .folder(let id):
+            if expandedProjects.contains(id) { expandedProjects.remove(id) }
+            else { expandedProjects.insert(id) }
+        case .session(let sid):
+            if let project = cliProjects.first(where: { $0.sessions.contains { $0.id == sid } }),
+               let session = project.sessions.first(where: { $0.id == sid }) {
+                resumeCLISession(session, projectPath: project.path)
+            }
+        case .none: break
+        }
     }
 
     // MARK: - Delete
@@ -305,4 +370,9 @@ struct CLISession: Identifiable {
     let id: String
     let title: String
     let modifiedAt: Date
+}
+
+enum FocusItem: Hashable {
+    case folder(String)
+    case session(String)
 }

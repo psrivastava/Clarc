@@ -257,18 +257,53 @@ struct MainView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(ClaudeTheme.background)
             } else {
-                VStack(spacing: 16) {
-                    Image(systemName: "sparkle")
-                        .font(.system(size: 48))
-                        .foregroundStyle(ClaudeTheme.accent)
+                VStack(spacing: 32) {
+                    Spacer()
 
-                    Text("Select a Project")
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(ClaudeTheme.textPrimary)
+                    VStack(spacing: 12) {
+                        Image(systemName: "sparkle")
+                            .font(.system(size: 48))
+                            .foregroundStyle(ClaudeTheme.accent)
+                        Text("Welcome to Clarc")
+                            .font(.title.weight(.semibold))
+                            .foregroundStyle(ClaudeTheme.textPrimary)
+                        Text("A native macOS client for Claude Code")
+                            .font(.subheadline)
+                            .foregroundStyle(ClaudeTheme.textSecondary)
+                    }
 
-                    Text("Select a project from the sidebar or add a new one.")
-                        .font(.subheadline)
-                        .foregroundStyle(ClaudeTheme.textSecondary)
+                    HStack(spacing: 16) {
+                        EmptyStateActionCard(
+                            icon: "folder.badge.plus",
+                            title: "Add Project",
+                            subtitle: "Open a local folder",
+                            action: { showFilePicker = true }
+                        )
+                        EmptyStateActionCard(
+                            icon: "arrow.down.circle",
+                            title: "Clone Repo",
+                            subtitle: "Clone from GitHub",
+                            action: { showGitHubSheet = true }
+                        )
+                    }
+                    .frame(maxWidth: 400)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Keyboard Shortcuts")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(ClaudeTheme.textTertiary)
+                            .textCase(.uppercase)
+                        HStack(spacing: 24) {
+                            ShortcutHint(keys: "⌘N", label: "New Chat")
+                            ShortcutHint(keys: "⌘K", label: "Command Palette")
+                            ShortcutHint(keys: "⌘1-3", label: "Sidebar Tabs")
+                            ShortcutHint(keys: "⌘4", label: "Inspector")
+                        }
+                    }
+                    .padding(16)
+                    .background(ClaudeTheme.surfaceSecondary.opacity(0.5), in: RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusMedium))
+
+                    Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(ClaudeTheme.background)
@@ -330,7 +365,7 @@ struct DetailToolbar: View {
                         Image(systemName: "sidebar.trailing")
                     }
                     .help("Toggle Inspector")
-                    .keyboardShortcut("4", modifiers: .command)
+                    .keyboardShortcut("5", modifiers: .command)
 
                     Button {
                         openSettings()
@@ -634,7 +669,7 @@ struct SidebarTabShortcuts: View {
                     columnVisibility = .all
                     withAnimation(.easeInOut(duration: 0.15)) { sidebarTab = .files }
                 }
-                .keyboardShortcut("3", modifiers: .command)
+                .keyboardShortcut("4", modifiers: .command)
                 .hidden()
             }
     }
@@ -945,6 +980,63 @@ struct EffortPickerSheet: View {
         .onAppear {
             selectedIndex = items.firstIndex(where: { $0 == effectiveEffort }) ?? 0
             DispatchQueue.main.async { isFocused = true }
+        }
+    }
+}
+
+struct EmptyStateActionCard: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 28))
+                    .foregroundStyle(ClaudeTheme.accent)
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(ClaudeTheme.textPrimary)
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(ClaudeTheme.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+            .background(
+                isHovered ? ClaudeTheme.surfaceTertiary : ClaudeTheme.surfaceSecondary,
+                in: RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusMedium)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusMedium)
+                    .strokeBorder(isHovered ? ClaudeTheme.accent.opacity(0.3) : ClaudeTheme.border, lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .animation(.easeInOut(duration: 0.15), value: isHovered)
+    }
+}
+
+struct ShortcutHint: View {
+    let keys: String
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(keys)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(ClaudeTheme.textPrimary)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(ClaudeTheme.surfaceTertiary, in: RoundedRectangle(cornerRadius: 4))
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(ClaudeTheme.textSecondary)
         }
     }
 }

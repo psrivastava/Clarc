@@ -111,27 +111,19 @@ struct GeneralSettingsTab: View {
                 .font(.system(size: ClaudeTheme.size(12)))
                 .foregroundStyle(.secondary)
                 .frame(width: 72, alignment: .leading)
-            Button(action: onDecrease) {
-                Image(systemName: "minus")
-                    .frame(width: 26, height: 26)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color(NSColor.separatorColor), lineWidth: 1))
+            fontStepButton(systemName: "minus", action: onDecrease)
+                .disabled(value <= ThemeStore.minFontSizeAdjustment)
+            Group {
+                if value == 0 {
+                    Text("Default")
+                } else {
+                    Text(verbatim: value > 0 ? "+\(value)" : "\(value)")
+                }
             }
-            .buttonStyle(.plain)
-            .disabled(value <= ThemeStore.minFontSizeAdjustment)
-            Text(value == 0 ? "Default" : (value > 0 ? "+\(value)" : "\(value)"))
-                .font(.system(size: ClaudeTheme.size(13), weight: .medium))
-                .frame(minWidth: 48, alignment: .center)
-            Button(action: onIncrease) {
-                Image(systemName: "plus")
-                    .frame(width: 26, height: 26)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color(NSColor.separatorColor), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .disabled(value >= ThemeStore.maxFontSizeAdjustment)
+            .font(.system(size: ClaudeTheme.size(13), weight: .medium))
+            .frame(minWidth: 48, alignment: .center)
+            fontStepButton(systemName: "plus", action: onIncrease)
+                .disabled(value >= ThemeStore.maxFontSizeAdjustment)
             if value != 0 {
                 Button("Reset", action: onReset)
                     .buttonStyle(.plain)
@@ -139,6 +131,17 @@ struct GeneralSettingsTab: View {
                     .foregroundStyle(ClaudeTheme.accent)
             }
         }
+    }
+
+    private func fontStepButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .frame(width: 26, height: 26)
+                .background(Color(NSColor.controlBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color(NSColor.separatorColor), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Notifications Section

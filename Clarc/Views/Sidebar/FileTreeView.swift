@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import ClarcCore
 
 /// View that displays the project folder structure as a tree.
@@ -290,6 +291,11 @@ private struct FileNodeRow: View {
                         Label("Add path to message", systemImage: "text.append")
                     }
                 }
+                Button {
+                    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: node.id)])
+                } label: {
+                    Label("Show in Finder", systemImage: "folder")
+                }
             }
 
             if isExpanded {
@@ -353,6 +359,11 @@ private struct SearchResultRow: View {
                 onAddPath(node)
             } label: {
                 Label("Add path to message", systemImage: "text.append")
+            }
+            Button {
+                NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: node.id)])
+            } label: {
+                Label("Show in Finder", systemImage: "folder")
             }
         }
     }

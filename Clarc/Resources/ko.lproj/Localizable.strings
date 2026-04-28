@@ -101,6 +101,7 @@
 "%d files" = "%d개 파일";
 "Unable to load files" = "파일을 불러올 수 없습니다";
 "Add path to message" = "메시지에 경로 추가";
+"Show in Finder" = "Finder에서 보기";
 
 // MARK: - ProjectListView
 "Projects" = "프로젝트";

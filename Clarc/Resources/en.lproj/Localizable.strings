@@ -101,6 +101,7 @@
 "%d files" = "%d files";
 "Unable to load files" = "Unable to load files";
 "Add path to message" = "Add path to message";
+"Show in Finder" = "Show in Finder";
 
 // MARK: - ProjectListView
 "Projects" = "Projects";

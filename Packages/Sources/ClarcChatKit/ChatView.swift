@@ -2,26 +2,26 @@ import Combine
 import SwiftUI
 import ClarcCore
 
-public struct ChatView: View {
+public struct ChatView<InputAccessory: View>: View {
     @Environment(WindowState.self) private var windowState
     @Environment(ChatBridge.self) private var chatBridge
     @State private var shortcuts: [ChatShortcut] = []
 
-    public init() {}
+    private let inputAccessory: InputAccessory
+
+    public init(@ViewBuilder inputAccessory: () -> InputAccessory) {
+        self.inputAccessory = inputAccessory()
+    }
 
     public var body: some View {
         VStack(spacing: 0) {
-            if windowState.selectedProject != nil && !shortcuts.isEmpty {
-                shortcutBar
-            }
-
-            if let contextPct = chatBridge.lastTurnContextUsedPercentage, contextPct > 0 {
-                ContextProgressBar(percentage: min(contextPct, 100))
-            }
-
             messageScrollView
 
-            InputBarView()
+            InputBarView(accessory: inputAccessory) {
+                if windowState.selectedProject != nil && !shortcuts.isEmpty {
+                    shortcutBar
+                }
+            }
 
             StatusLineView()
         }
@@ -72,8 +72,7 @@ public struct ChatView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
         }
-        .scrollFadeEdges(backgroundColor: ClaudeTheme.surfaceElevated)
-        .background(ClaudeTheme.surfaceElevated)
+        .background(ClaudeTheme.background)
     }
 
     private func executeShortcut(_ shortcut: ChatShortcut) {
@@ -114,5 +113,11 @@ struct ContextProgressBar: View {
             }
         }
         .frame(height: 2)
+    }
+}
+
+public extension ChatView where InputAccessory == EmptyView {
+    init() {
+        self.init { EmptyView() }
     }
 }

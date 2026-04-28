@@ -11,8 +11,8 @@ struct AttachmentPreviewItem: View {
 
     @State private var isHovered = false
 
-    private let cardWidth: CGFloat = 120
-    private let cardHeight: CGFloat = 130
+    private let cardWidth: CGFloat = 96
+    private let cardHeight: CGFloat = 104
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -28,20 +28,26 @@ struct AttachmentPreviewItem: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(.black.opacity(0.3))
                     .frame(width: cardWidth, height: cardHeight)
+                    .allowsHitTesting(false)
+                    .transition(.opacity.animation(.easeOut(duration: 0.15)))
 
                 Button {
                     onRemove()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: ClaudeTheme.size(18)))
+                        .font(.system(size: ClaudeTheme.size(16)))
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
+                        .frame(width: 24, height: 24)
+                        .contentShape(Circle())
                 }
-                .buttonStyle(.borderless)
-                .offset(x: -4, y: 4)
+                .buttonStyle(.plain)
+                .padding(4)
                 .transition(.opacity.animation(.easeOut(duration: 0.15)))
             }
         }
+        .frame(width: cardWidth, height: cardHeight)
+        .contentShape(RoundedRectangle(cornerRadius: 8))
         .onHover { hovering in
             isHovered = hovering
         }

@@ -2,10 +2,13 @@ import SwiftUI
 import UniformTypeIdentifiers
 import ClarcCore
 
-struct InputBarView: View {
+struct InputBarView<Accessory: View, TopAccessory: View>: View {
     @Environment(ChatBridge.self) private var chatBridge
     @Environment(WindowState.self) private var windowState
     @FocusState private var isInputFocused: Bool
+
+    private let accessory: Accessory
+    private let topAccessory: TopAccessory
 
     @State private var showFilePicker = false
     @State private var showSlashPopup = false
@@ -16,29 +19,44 @@ struct InputBarView: View {
     @State private var showAtFilePopup = false
     @State private var atFileSelectedIndex = 0
     @State private var historyIndex: Int = -1
-    @State private var pendingSend = false
-    @State private var pendingNewline = false
+    @State private var inputHasMarkedText = false
     @State private var textFieldLayoutID = 0
-    @State private var queuePreviewHeight: CGFloat = 0
     @State private var measuredInputHeight: CGFloat = 20
+
+    init(accessory: Accessory, @ViewBuilder topAccessory: () -> TopAccessory) {
+        self.accessory = accessory
+        self.topAccessory = topAccessory()
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             if !windowState.attachments.isEmpty {
                 attachmentPreviews
+                    .padding(.horizontal, 16)
+                    .transition(.offset(y: 10).combined(with: .opacity))
             }
 
-            inputRow
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            if !windowState.messageQueue.isEmpty {
+                queuedMessagePreviews
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
+            topAccessory
+
+            inputComposer
+            .padding(.horizontal, 14)
+            .padding(.top, 16)
+            .padding(.bottom, 10)
             .background(ClaudeTheme.inputBackground)
             .clipShape(RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusPill))
             .overlay(
                 RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusPill)
                     .strokeBorder(ClaudeTheme.inputBorder, lineWidth: 1)
             )
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 8)
+            .padding(.top, 0)
+            .padding(.bottom, 12)
             .sheet(item: $slashDetailCommand) { cmd in CommandDetailSheet(command: cmd) }
             .sheet(item: $textPreviewAttachment) { attachment in TextPreviewSheet(attachment: attachment) }
             .onDrop(of: [.fileURL, .image], isTargeted: $isDragOver) { providers in
@@ -46,22 +64,6 @@ struct InputBarView: View {
                 return true
             }
             .overlay { dragOverlay }
-            .overlay(alignment: .top) {
-                if !windowState.messageQueue.isEmpty {
-                    HStack(spacing: 0) {
-                        Spacer()
-                        queuedMessagePreviews
-                            .background(
-                                GeometryReader { geo in
-                                    Color.clear.onAppear { queuePreviewHeight = geo.size.height }
-                                        .onChange(of: geo.size.height) { _, h in queuePreviewHeight = h }
-                                }
-                            )
-                    }
-                    .offset(y: -queuePreviewHeight)
-                    .transition(.offset(y: 10).combined(with: .opacity))
-                }
-            }
         }
         .overlay(alignment: .top) {
             HStack(alignment: .top, spacing: 0) {
@@ -88,7 +90,7 @@ struct InputBarView: View {
             }
             .padding(.horizontal, 16)
             .offset(y: -4)
-            // Show popup above the input bar by mapping top guide to bottom
+            // Show floating popups above the input bar by mapping top guide to bottom.
             .alignmentGuide(.top) { $0[.bottom] }
         }
         .onChange(of: windowState.requestInputFocus) { _, newValue in
@@ -135,33 +137,27 @@ struct InputBarView: View {
         .onTapGesture { isInputFocused = true }
     }
 
-    // MARK: - Input Row
+    // MARK: - Input Composer
 
     @ViewBuilder
-    private var inputRow: some View {
-        HStack(spacing: 10) {
-            Button {
-                showFilePicker = true
-            } label: {
-                Image(systemName: "paperclip")
-                    .font(.system(size: ClaudeTheme.size(14)))
-                    .foregroundStyle(ClaudeTheme.textSecondary)
-            }
-            .buttonStyle(.borderless)
-            .help("Attach file")
-            .fileImporter(
-                isPresented: $showFilePicker,
-                allowedContentTypes: [.item],
-                allowsMultipleSelection: true
-            ) { result in
-                handleFileImport(result)
-            }
-
+    private var inputComposer: some View {
+        VStack(alignment: .leading, spacing: 10) {
             inputTextField
+            composerActionRow
+        }
+    }
+
+    private var composerActionRow: some View {
+        HStack(spacing: 10) {
+            attachButton
+
+            accessory
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             if !showSlashPopup {
                 ClaudeSendButton(
                     isEnabled: !windowState.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        || inputHasMarkedText
                         || !windowState.attachments.isEmpty,
                     action: sendMessage
                 )
@@ -169,6 +165,28 @@ struct InputBarView: View {
             } else {
                 ClaudeSendButton(isEnabled: false, action: {}).disabled(true)
             }
+        }
+        .frame(height: 32)
+    }
+
+    private var attachButton: some View {
+        Button {
+            showFilePicker = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: ClaudeTheme.size(15), weight: .regular))
+                .foregroundStyle(ClaudeTheme.textTertiary)
+                .frame(width: 32, height: 32)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.borderless)
+        .help("Attach file")
+        .fileImporter(
+            isPresented: $showFilePicker,
+            allowedContentTypes: [.item],
+            allowsMultipleSelection: true
+        ) { result in
+            handleFileImport(result)
         }
     }
 
@@ -184,6 +202,10 @@ struct InputBarView: View {
                 .onChange(of: windowState.inputText) { oldValue, newValue in
                     handleInputTextChange(oldValue: oldValue, newValue: newValue)
                 }
+                .onKeyPress(phases: .down) { _ in
+                    refreshMarkedTextStateSoon()
+                    return .ignored
+                }
                 .onKeyPress(.return, phases: .down) { handleReturnKey($0) }
                 .onKeyPress(.upArrow, phases: .down) { _ in handleUpArrow() }
                 .onKeyPress(.downArrow, phases: .down) { _ in handleDownArrow() }
@@ -192,7 +214,7 @@ struct InputBarView: View {
                 .onKeyPress(.escape, phases: .down) { _ in handleEscapeKey() }
                 .id(textFieldLayoutID)
 
-            if windowState.inputText.isEmpty {
+            if windowState.inputText.isEmpty && !inputHasMarkedText {
                 Text("Type a message...", bundle: .module)
                     .font(.system(size: ClaudeTheme.size(14)))
                     .foregroundStyle(.secondary)
@@ -207,8 +229,9 @@ struct InputBarView: View {
 
     private var clampedInputHeight: CGFloat {
         let oneLine: CGFloat = 20
+        let minHeight: CGFloat = 38
         let maxLines: CGFloat = 10
-        return min(max(measuredInputHeight, oneLine), oneLine * maxLines)
+        return min(max(measuredInputHeight, minHeight), oneLine * maxLines)
     }
 
     private func handleInputTextChange(oldValue: String, newValue: String) {
@@ -244,16 +267,7 @@ struct InputBarView: View {
         }
         if shouldShowAt { atFileSelectedIndex = 0 }
 
-        if pendingSend {
-            pendingSend = false
-            sendMessage()
-        }
-        if pendingNewline {
-            pendingNewline = false
-            Task { @MainActor in
-                windowState.inputText.append("\n")
-            }
-        }
+        refreshMarkedTextState()
     }
 
     private func handleUpArrow() -> KeyPress.Result {
@@ -459,6 +473,7 @@ struct InputBarView: View {
     // Recreate the text field to reset IME state; prevents ghost Hangul leaking into the next input.
     private func resetIMEState() {
         textFieldLayoutID += 1
+        inputHasMarkedText = false
         DispatchQueue.main.async { isInputFocused = true }
     }
 
@@ -568,9 +583,7 @@ struct InputBarView: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     Button {
-                        withAnimation(.easeOut(duration: 0.15)) {
-                            windowState.dequeueMessage(id: queued.id)
-                        }
+                        removeQueuedMessage(queued.id)
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: ClaudeTheme.size(9), weight: .semibold))
@@ -579,17 +592,24 @@ struct InputBarView: View {
                             .background(ClaudeTheme.textSecondary.opacity(0.1), in: Circle())
                     }
                     .buttonStyle(.borderless)
+                    .help("Remove")
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .background(.ultraThinMaterial)
                 .clipShape(Capsule())
-                .frame(maxWidth: 350)
+                .frame(maxWidth: 350, alignment: .trailing)
                 .opacity(0.9)
             }
         }
-        .padding(.trailing, 24)
+        .padding(.trailing, 14)
         .padding(.bottom, 4)
+    }
+
+    private func removeQueuedMessage(_ id: UUID) {
+        withAnimation(.easeOut(duration: 0.15)) {
+            windowState.dequeueMessage(id: id)
+        }
     }
 
     private func queuedDisplayText(_ queued: QueuedMessage) -> String {
@@ -612,7 +632,6 @@ struct InputBarView: View {
                     }
                 }
             }
-            .padding(.horizontal, 16)
             .padding(.top, 10)
             .padding(.bottom, 6)
         }
@@ -621,6 +640,9 @@ struct InputBarView: View {
     // MARK: - Send / Return
 
     private func sendMessage() {
+        if hasMarkedText() {
+            commitMarkedText()
+        }
         guard !windowState.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 || !windowState.attachments.isEmpty else { return }
         historyIndex = -1
@@ -648,11 +670,13 @@ struct InputBarView: View {
 
     private func handleReturnKey(_ keyPress: KeyPress) -> KeyPress.Result {
         if keyPress.modifiers.contains(.shift) {
-            // Mirror the plain-Enter IME path: commit composing Hangul first, then append \n
-            // once the committed text has propagated to inputText via onChange.
-            if NSTextInputContext.current?.client.hasMarkedText() == true {
-                NSTextInputContext.current?.client.unmarkText()
-                pendingNewline = true
+            // Commit composing Hangul before inserting the newline so the final syllable is kept.
+            if hasMarkedText() {
+                commitMarkedText()
+                Task { @MainActor in
+                    syncInputTextFromActiveEditor()
+                    windowState.inputText.append("\n")
+                }
                 return .handled
             }
             windowState.inputText.append("\n")
@@ -677,16 +701,48 @@ struct InputBarView: View {
             }
             return .handled
         }
-        // If IME is composing (e.g. last Korean character), commit with unmarkText().
-        // Return .handled instead of .ignored to prevent NSTextField "end editing" behavior (select all).
-        // After commit, onChange fires and pendingSend flag triggers auto-send.
-        if NSTextInputContext.current?.client.hasMarkedText() == true {
-            NSTextInputContext.current?.client.unmarkText()
-            pendingSend = true
+        // Commit composing Hangul before sending; SwiftUI's binding can lag behind NSTextView.
+        if hasMarkedText() {
+            commitMarkedText()
+            Task { @MainActor in
+                syncInputTextFromActiveEditor()
+                sendMessage()
+            }
             return .handled
         }
         sendMessage()
         return .handled
+    }
+
+    private func hasMarkedText() -> Bool {
+        NSTextInputContext.current?.client.hasMarkedText() == true
+    }
+
+    private func refreshMarkedTextState() {
+        let markedTextActive = hasMarkedText()
+        if inputHasMarkedText != markedTextActive {
+            inputHasMarkedText = markedTextActive
+        }
+    }
+
+    private func refreshMarkedTextStateSoon() {
+        Task { @MainActor in
+            refreshMarkedTextState()
+        }
+    }
+
+    private func commitMarkedText() {
+        NSTextInputContext.current?.client.unmarkText()
+        syncInputTextFromActiveEditor()
+        refreshMarkedTextState()
+    }
+
+    private func syncInputTextFromActiveEditor() {
+        guard let editor = NSApp.keyWindow?.firstResponder as? NSText else { return }
+        let text = editor.string
+        if windowState.inputText != text {
+            windowState.inputText = text
+        }
     }
 
     // MARK: - Paste & File Import

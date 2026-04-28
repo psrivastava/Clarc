@@ -212,8 +212,6 @@ struct MainView: View {
             .scrollFadeEdges(backgroundColor: ClaudeTheme.surfaceElevated)
 
             Spacer()
-
-            ChatToolbarControls()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -251,7 +249,9 @@ struct MainView: View {
                 VStack(spacing: 0) {
                     chatToolbarArea
                     ClaudeThemeDivider()
-                    ChatView()
+                    ChatView {
+                        ChatToolbarControls(placement: .composer)
+                    }
                 }
                 .modifier(ChatDetailModifiers())
             } else if let preview = windowState.previewCLISession {
@@ -693,15 +693,30 @@ private func effortDisplayName(_ effort: String) -> String {
     }
 }
 
+enum ChatToolbarControlsPlacement {
+    case toolbar
+    case composer
+}
+
 struct ChatToolbarControls: View {
     @Environment(AppState.self) private var appState
     @Environment(WindowState.self) private var windowState
+
+    let placement: ChatToolbarControlsPlacement
+
+    init(placement: ChatToolbarControlsPlacement = .toolbar) {
+        self.placement = placement
+    }
 
     private var effectiveMode: PermissionMode { windowState.sessionPermissionMode ?? appState.permissionMode }
     private var effectiveModel: String { windowState.sessionModel ?? appState.selectedModel }
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: placement == .composer ? 8 : 4) {
+            if placement == .composer {
+                Spacer(minLength: 12)
+            }
+
             Menu {
                 Section("Permission Mode") {
                     ForEach(PermissionMode.allCases, id: \.self) { mode in
@@ -714,7 +729,10 @@ struct ChatToolbarControls: View {
                     }
                 }
             } label: {
-                ToolbarChipLabel(title: effectiveMode.displayName)
+                controlLabel(
+                    title: effectiveMode.displayName,
+                    isAccent: placement == .composer
+                )
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
@@ -732,7 +750,10 @@ struct ChatToolbarControls: View {
                     }
                 }
             } label: {
-                ToolbarChipLabel(title: AppState.modelDisplayName(effectiveModel))
+                controlLabel(
+                    title: AppState.modelDisplayName(effectiveModel),
+                    isAccent: false
+                )
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
@@ -757,11 +778,25 @@ struct ChatToolbarControls: View {
                     }
                 }
             } label: {
-                ToolbarChipLabel(title: windowState.sessionEffort.map { effortDisplayName($0) } ?? "Auto Effort")
+                controlLabel(
+                    title: windowState.sessionEffort.map { effortDisplayName($0) } ?? "Auto Effort",
+                    isAccent: false
+                )
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
             .help("Effort level: \(windowState.sessionEffort.map { effortDisplayName($0) } ?? "Auto Effort")")
+        }
+        .frame(maxWidth: placement == .composer ? .infinity : nil, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func controlLabel(title: String, isAccent: Bool) -> some View {
+        switch placement {
+        case .toolbar:
+            ToolbarChipLabel(title: title)
+        case .composer:
+            ComposerControlLabel(title: title, isAccent: isAccent)
         }
     }
 }
@@ -788,6 +823,32 @@ struct ToolbarChipLabel: View {
         .onHover { isHovered = $0 }
         .pointerCursorOnHover()
         .animation(.easeInOut(duration: 0.15), value: isHovered)
+    }
+}
+
+struct ComposerControlLabel: View {
+    let title: String
+    let isAccent: Bool
+
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(LocalizedStringKey(title))
+                .font(.system(size: ClaudeTheme.size(13), weight: .medium))
+                .lineLimit(1)
+        }
+        .foregroundStyle(isAccent ? ClaudeTheme.accent : ClaudeTheme.textSecondary)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 5)
+        .background(
+            isHovered ? ClaudeTheme.surfaceSecondary.opacity(0.85) : Color.clear,
+            in: RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusSmall)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: ClaudeTheme.cornerRadiusSmall))
+        .onHover { isHovered = $0 }
+        .pointerCursorOnHover()
+        .animation(.easeInOut(duration: 0.12), value: isHovered)
     }
 }
 

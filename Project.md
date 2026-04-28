@@ -116,3 +116,11 @@ Resolved 4 conflicts:
 | `HistoryListView.swift` | Kept theirs | Upstream's scaled sizing with simple empty state (fork's search-aware empty state dropped) |
 
 **Strategy:** Independent features → keep both. Design/layout changes → prefer upstream's newer scaled sizing, preserve useful fork additions (Spacer). Critical fix: ensure proper brace closure when combining sections (sidebarSection needs 3 closing braces before fontSizeSection).
+
+### 2026-04-28 — Merge `main` → `psrivastava` (`6a9b6c1`)
+
+| File | Resolution | Details |
+|------|-----------|---------|
+| `ChatView.swift` | Keep theirs + keep ContextProgressBar | Blocks 1&2: upstream shortcut bar relocated to InputBarView, background token changed to `ClaudeTheme.background`. Block 3: kept both — fork's `ContextProgressBar` struct + upstream's `ChatView` convenience init extension |
+
+**Strategy:** Upstream relocated shortcut bar into InputBarView (better placement) and changed background token — keep theirs. ContextProgressBar is an independent fork feature (context usage indicator) — preserved alongside upstream's convenience init.

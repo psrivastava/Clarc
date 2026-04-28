@@ -598,7 +598,7 @@ struct InputBarView<Accessory: View, TopAccessory: View>: View {
                 .padding(.vertical, 8)
                 .background(.ultraThinMaterial)
                 .clipShape(Capsule())
-                .frame(maxWidth: 350)
+                .frame(maxWidth: 350, alignment: .trailing)
                 .opacity(0.9)
             }
         }

@@ -27,3 +27,12 @@
 "All properties example:" = "All properties example:";
 "Short description shown in the command picker" = "Short description shown in the command picker";
 "Optional longer description shown in command details" = "Optional longer description shown in command details";
+"Clarc shortcut export file." = "Clarc shortcut export file.";
+"Edit the array below to add, remove, or change shortcuts." = "Edit the array below to add, remove, or change shortcuts.";
+"Each shortcut supports these properties:" = "Each shortcut supports these properties:";
+"id: optional unique identifier (UUID). Auto-generated on import if omitted." = "id: optional unique identifier (UUID). Auto-generated on import if omitted.";
+"name: label shown on the shortcut button." = "name: label shown on the shortcut button.";
+"message: text sent to Claude, or command run in the terminal." = "message: text sent to Claude, or command run in the terminal.";
+"isTerminalCommand: true runs the message as a terminal command instead of sending it to chat." = "isTerminalCommand: true runs the message as a terminal command instead of sending it to chat.";
+"Shortcut button label" = "Shortcut button label";
+"Message sent to Claude or command run in terminal" = "Message sent to Claude or command run in terminal";

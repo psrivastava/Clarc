@@ -25,7 +25,7 @@ public struct ChatShortcut: Identifiable, Codable, Hashable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         name = try container.decode(String.self, forKey: .name)
         message = try container.decode(String.self, forKey: .message)
         isTerminalCommand = try container.decodeIfPresent(Bool.self, forKey: .isTerminalCommand) ?? false
@@ -96,24 +96,55 @@ public enum ChatShortcutRegistry {
     public static func exportShortcuts() -> Data? {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let content: [ChatShortcut]
         if shortcuts.isEmpty {
-            let example = [ChatShortcut(
+            content = [ChatShortcut(
                 id: UUID(),
                 name: "Example Shortcut",
                 message: "This text will be sent to Claude",
                 isTerminalCommand: false
             )]
-            return try? encoder.encode(example)
+        } else {
+            content = shortcuts
         }
-        return try? encoder.encode(shortcuts)
+        guard let data = try? encoder.encode(content),
+              let json = String(data: data, encoding: .utf8)
+        else { return nil }
+        return Data((exportCommentHeader() + json + "\n").utf8)
     }
 
     public static func importShortcuts(from data: Data) -> Bool {
-        guard let imported = try? JSONDecoder().decode([ChatShortcut].self, from: data) else {
+        let jsonData = data.removingJSONComments()
+        guard let imported = try? JSONDecoder().decode([ChatShortcut].self, from: jsonData) else {
             return false
         }
         shortcuts = imported
         save()
         return true
+    }
+
+    private static func exportCommentHeader() -> String {
+        let commentLines = [
+            String(localized: "Clarc shortcut export file.", bundle: .module),
+            String(localized: "Usage:", bundle: .module),
+            String(localized: "Edit the array below to add, remove, or change shortcuts.", bundle: .module),
+            String(localized: "Each shortcut supports these properties:", bundle: .module),
+            String(localized: "id: optional unique identifier (UUID). Auto-generated on import if omitted.", bundle: .module),
+            String(localized: "name: label shown on the shortcut button.", bundle: .module),
+            String(localized: "message: text sent to Claude, or command run in the terminal.", bundle: .module),
+            String(localized: "isTerminalCommand: true runs the message as a terminal command instead of sending it to chat.", bundle: .module),
+            "",
+            String(localized: "All properties example:", bundle: .module),
+            "{",
+            "  \"id\": \"00000000-0000-0000-0000-000000000001\",",
+            "  \"isTerminalCommand\": false,",
+            "  \"message\": \"\(String(localized: "Message sent to Claude or command run in terminal", bundle: .module))\",",
+            "  \"name\": \"\(String(localized: "Shortcut button label", bundle: .module))\"",
+            "}",
+            "",
+        ]
+        return commentLines.map { line in
+            line.isEmpty ? "//" : "// \(line)"
+        }.joined(separator: "\n") + "\n"
     }
 }

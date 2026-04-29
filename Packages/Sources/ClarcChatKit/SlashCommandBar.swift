@@ -432,7 +432,7 @@ public enum SlashCommandRegistry {
     }
 }
 
-private extension Data {
+extension Data {
     func removingJSONComments() -> Data {
         let bytes = Array(self)
         var output: [UInt8] = []

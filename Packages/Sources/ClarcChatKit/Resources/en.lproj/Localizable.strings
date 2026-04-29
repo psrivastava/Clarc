@@ -13,3 +13,17 @@
 "A command with this name already exists." = "A command with this name already exists.";
 "Restore modified default commands to their original state" = "Restore modified default commands to their original state";
 "All modified default commands will be restored to their original state." = "All modified default commands will be restored to their original state.";
+"Clarc slash command export file." = "Clarc slash command export file.";
+"Usage:" = "Usage:";
+"Edit the array below to add, remove, or change custom slash commands." = "Edit the array below to add, remove, or change custom slash commands.";
+"The leading slash is optional while editing names; Clarc saves names without it." = "The leading slash is optional while editing names; Clarc saves names without it.";
+"Built-in command names are ignored on import and are never exported." = "Built-in command names are ignored on import and are never exported.";
+"Each custom command supports these properties:" = "Each custom command supports these properties:";
+"name: command name without the leading slash." = "name: command name without the leading slash.";
+"description: short text shown in the command picker." = "description: short text shown in the command picker.";
+"detailDescription: optional longer text shown in command details. Use null or omit it when empty." = "detailDescription: optional longer text shown in command details. Use null or omit it when empty.";
+"acceptsInput: true lets users type additional text after the command." = "acceptsInput: true lets users type additional text after the command.";
+"isInteractive: true runs the command in the interactive terminal." = "isInteractive: true runs the command in the interactive terminal.";
+"All properties example:" = "All properties example:";
+"Short description shown in the command picker" = "Short description shown in the command picker";
+"Optional longer description shown in command details" = "Optional longer description shown in command details";

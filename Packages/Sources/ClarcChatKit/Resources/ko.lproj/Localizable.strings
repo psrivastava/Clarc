@@ -56,6 +56,20 @@
 "Invalid JSON format." = "유효하지 않은 JSON 형식입니다.";
 "Imported %lld custom commands." = "%lld개 커스텀 커맨드를 가져왔습니다.";
 "A command with this name already exists." = "이미 존재하는 커맨드 이름입니다.";
+"Clarc slash command export file." = "Clarc 슬래시 커맨드 내보내기 파일입니다.";
+"Usage:" = "사용법:";
+"Edit the array below to add, remove, or change custom slash commands." = "아래 배열을 편집해서 커스텀 슬래시 커맨드를 추가, 삭제, 변경하세요.";
+"The leading slash is optional while editing names; Clarc saves names without it." = "이름을 편집할 때 앞의 /는 선택사항입니다. Clarc는 / 없이 저장합니다.";
+"Built-in command names are ignored on import and are never exported." = "기본 명령어 이름은 가져올 때 무시되며 내보내기에 포함되지 않습니다.";
+"Each custom command supports these properties:" = "각 커스텀 커맨드는 다음 속성을 지원합니다:";
+"name: command name without the leading slash." = "name: 앞의 /를 제외한 커맨드 이름입니다.";
+"description: short text shown in the command picker." = "description: 커맨드 선택기에 표시되는 짧은 설명입니다.";
+"detailDescription: optional longer text shown in command details. Use null or omit it when empty." = "detailDescription: 커맨드 상세에 표시되는 선택적 긴 설명입니다. 비어 있으면 null을 쓰거나 생략하세요.";
+"acceptsInput: true lets users type additional text after the command." = "acceptsInput: true이면 커맨드 뒤에 추가 텍스트를 입력할 수 있습니다.";
+"isInteractive: true runs the command in the interactive terminal." = "isInteractive: true이면 인터랙티브 터미널에서 실행됩니다.";
+"All properties example:" = "모든 속성 예시:";
+"Short description shown in the command picker" = "커맨드 선택기에 표시되는 짧은 설명";
+"Optional longer description shown in command details" = "커맨드 상세에 표시되는 선택적 긴 설명";
 
 // MARK: - ShortcutManagerView
 "Shortcut Manager" = "단축키 관리자";

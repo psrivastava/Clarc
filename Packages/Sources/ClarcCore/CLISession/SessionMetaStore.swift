@@ -34,22 +34,32 @@ public actor SessionMetaStore {
     private let baseURL: URL
     private let logger = Logger(subsystem: "com.claudework", category: "SessionMetaStore")
 
+    /// In-memory cache. The sidecar directory is owned exclusively by Clarc
+    /// (CLI doesn't touch it), so the cache is authoritative once populated.
+    private var cache: [String: Meta] = [:]
+
     public init() {
         self.baseURL = AppSupport.bundleScopedURL.appendingPathComponent("session-meta", isDirectory: true)
     }
 
     public func load(sessionId: String) -> Meta {
+        if let cached = cache[sessionId] { return cached }
         let url = fileURL(for: sessionId)
         guard FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url) else {
-            return Meta()
+            let empty = Meta()
+            cache[sessionId] = empty
+            return empty
         }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return (try? decoder.decode(Meta.self, from: data)) ?? Meta()
+        let meta = (try? decoder.decode(Meta.self, from: data)) ?? Meta()
+        cache[sessionId] = meta
+        return meta
     }
 
     public func save(sessionId: String, meta: Meta) {
+        cache[sessionId] = meta
         let fm = FileManager.default
         var isDir: ObjCBool = false
         if !(fm.fileExists(atPath: baseURL.path, isDirectory: &isDir) && isDir.boolValue) {
@@ -67,6 +77,7 @@ public actor SessionMetaStore {
     }
 
     public func delete(sessionId: String) {
+        cache.removeValue(forKey: sessionId)
         let url = fileURL(for: sessionId)
         try? FileManager.default.removeItem(at: url)
     }
@@ -86,6 +97,7 @@ public actor SessionMetaStore {
                 result[sid] = meta
             }
         }
+        cache.merge(result) { _, new in new }
         return result
     }
 

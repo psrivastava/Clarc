@@ -58,7 +58,7 @@ public struct ChatSession: Identifiable, Codable, Sendable {
         origin = try container.decodeIfPresent(SessionOrigin.self, forKey: .origin) ?? .legacyClarc
     }
 
-    public struct Summary: Identifiable, Codable, Sendable {
+    public struct Summary: Identifiable, Codable, Sendable, Equatable {
         public let id: String
         public let projectId: UUID
         public var title: String

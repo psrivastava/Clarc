@@ -19,6 +19,16 @@ public actor CLISessionStore {
     private var cwdIndex: [String: URL] = [:]
     private var cwdIndexBuiltAt: Date?
 
+    /// Per-sid cache of jsonl sniff results, keyed by sid and invalidated by
+    /// file mtime. Avoids re-reading the first ~400 lines of every jsonl every
+    /// time the FS watcher fires (which happens on every assistant turn since
+    /// our own CLI subprocess is what's writing).
+    private struct SniffCacheEntry {
+        let mtime: Date
+        let result: SniffResult
+    }
+    private var sniffCache: [String: SniffCacheEntry] = [:]
+
     private lazy var decoder: JSONDecoder = {
         let d = JSONDecoder()
         d.dateDecodingStrategy = Self.dateStrategy
@@ -52,7 +62,7 @@ public actor CLISessionStore {
     /// the cwd-index (built by reading jsonl content, so it sees through the
     /// lossy slash/dot encoding) and falls back to forward encoding when no
     /// index entry exists yet.
-    private func directory(forCwd cwd: String) async -> URL {
+    public func directory(forCwd cwd: String) async -> URL {
         await ensureCwdIndex()
         if let url = cwdIndex[cwd.standardizedCwd()] { return url }
         return CLIProjectsDirectory.directory(forCwd: cwd)
@@ -167,13 +177,23 @@ public actor CLISessionStore {
 
         var summaries: [ChatSession.Summary] = []
         summaries.reserveCapacity(files.count)
+        let liveSids = Set(files.map { $0.deletingPathExtension().lastPathComponent })
+        sniffCache = sniffCache.filter { liveSids.contains($0.key) }
+
         for url in files {
             let sid = url.deletingPathExtension().lastPathComponent
             let meta = metaByID[sid] ?? SessionMetaStore.Meta()
             let mtimeDate = mtime(of: url) ?? Date()
-            let snippet = await sniffSummary(url: url)
+            let snippet: SniffResult
+            if let cached = sniffCache[sid], cached.mtime == mtimeDate {
+                snippet = cached.result
+            } else {
+                snippet = await sniffSummary(url: url)
+                sniffCache[sid] = SniffCacheEntry(mtime: mtimeDate, result: snippet)
+            }
             let title: String = {
                 if let t = meta.title, !t.isEmpty { return t }
+                if let t = snippet.latestAITitle, !t.isEmpty { return shortTitle(from: t) }
                 if let t = snippet.firstUserText, !t.isEmpty { return shortTitle(from: t) }
                 return shortTitle(from: "Session \(String(sid.prefix(8)))")
             }()
@@ -202,6 +222,15 @@ public actor CLISessionStore {
     private struct SniffResult {
         var firstUserText: String?
         var firstTimestamp: Date?
+        var latestAITitle: String?
+    }
+
+    /// Schema-light decoder for the CLI's `ai-title` jsonl line. Sidesteps
+    /// `CLISessionLine` so the renderer doesn't have to grow a case it never
+    /// shows.
+    private struct AITitleLine: Decodable {
+        let type: String?
+        let aiTitle: String?
     }
 
     private func sniffSummary(url: URL) async -> SniffResult {
@@ -212,15 +241,26 @@ public actor CLISessionStore {
                 if seen >= Self.titleSniffLineLimit { break }
                 seen += 1
                 guard !rawLine.isEmpty, let data = rawLine.data(using: .utf8) else { continue }
+
+                // ai-title sniff: cheap substring guard avoids paying the JSON
+                // decode cost on every line. Multiple ai-title lines may appear
+                // as the CLI rewrites the title — keep the most recent.
+                if rawLine.contains("\"type\":\"ai-title\""),
+                   let title = try? decoder.decode(AITitleLine.self, from: data).aiTitle,
+                   !title.isEmpty {
+                    result.latestAITitle = title
+                    continue
+                }
+
                 guard let decoded = try? decoder.decode(CLISessionLine.self, from: data) else { continue }
 
                 switch decoded {
                 case .user(let user):
                     if result.firstTimestamp == nil { result.firstTimestamp = user.timestamp }
                     if user.isMeta || user.isSidechain { continue }
-                    if let text = firstHumanText(from: user.message.content), result.firstUserText == nil {
+                    if result.firstUserText == nil,
+                       let text = firstHumanText(from: user.message.content) {
                         result.firstUserText = text
-                        return result
                     }
                 case .assistant(let assistant):
                     if result.firstTimestamp == nil { result.firstTimestamp = assistant.timestamp }
@@ -265,21 +305,27 @@ public actor CLISessionStore {
         cwd: String,
         projectId: UUID
     ) async -> ChatSession? {
-        let dir = await directory(forCwd: cwd)
-        let url = dir.appendingPathComponent("\(sid).jsonl")
+        let url = await jsonlURL(sid: sid, cwd: cwd)
 
         var lines: [CLISessionLine] = []
         var firstTimestamp: Date?
+        var latestAITitle: String?
 
         do {
             // jsonl is append-only; an in-flight last line will fail JSON decode
             // and we silently skip it via try? — that satisfies S1 (safe parse
             // during concurrent CLI writes).
             for try await rawLine in url.lines {
-                guard !rawLine.isEmpty, let data = rawLine.data(using: .utf8),
-                      let decoded = try? decoder.decode(CLISessionLine.self, from: data) else {
+                guard !rawLine.isEmpty, let data = rawLine.data(using: .utf8) else { continue }
+
+                if rawLine.contains("\"type\":\"ai-title\""),
+                   let title = try? decoder.decode(AITitleLine.self, from: data).aiTitle,
+                   !title.isEmpty {
+                    latestAITitle = title
                     continue
                 }
+
+                guard let decoded = try? decoder.decode(CLISessionLine.self, from: data) else { continue }
                 if firstTimestamp == nil {
                     switch decoded {
                     case .user(let u): firstTimestamp = u.timestamp
@@ -303,6 +349,7 @@ public actor CLISessionStore {
 
         let title: String = {
             if let t = meta.title, !t.isEmpty { return t }
+            if let t = latestAITitle, !t.isEmpty { return shortTitle(from: t) }
             if let firstUser = messages.first(where: { $0.role == .user })?.content,
                !firstUser.isEmpty {
                 return shortTitle(from: firstUser)
@@ -323,6 +370,25 @@ public actor CLISessionStore {
             permissionMode: meta.permissionMode,
             origin: .cliBacked
         )
+    }
+
+    // MARK: - Deletion
+
+    /// Remove the CLI-owned jsonl for a session.
+    public func deleteSession(sid: String, cwd: String) async {
+        let url = await jsonlURL(sid: sid, cwd: cwd)
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path) else { return }
+        do {
+            try fm.removeItem(at: url)
+            logger.debug("Deleted CLI session jsonl \(sid, privacy: .public)")
+        } catch {
+            logger.error("Failed to delete CLI session jsonl \(sid, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func jsonlURL(sid: String, cwd: String) async -> URL {
+        await directory(forCwd: cwd).appendingPathComponent("\(sid).jsonl")
     }
 
     // MARK: - External activity detection (S2)
@@ -359,6 +425,7 @@ public actor CLISessionStore {
 public enum CLIMetaEnvelope {
     public static func isEnvelope(_ trimmed: String) -> Bool {
         trimmed.hasPrefix("<local-command-caveat>")
+            || trimmed.hasPrefix("<local-command-stdout>")
             || trimmed.hasPrefix("<command-name>")
             || trimmed.hasPrefix("<system-reminder>")
     }

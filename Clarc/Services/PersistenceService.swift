@@ -29,15 +29,25 @@ actor PersistenceService {
 
     // MARK: - Sessions
 
-    func saveSession(_ session: ChatSession) async throws {
+    func saveSession(_ session: ChatSession, persistTitle: Bool = false) async throws {
         switch session.origin {
         case .cliBacked:
             // CLI owns the message log (jsonl). We only persist the Clarc-only
             // sidecar — title/pin/model/effort/permissionMode.
+            //
+            // Title rule: the sidecar holds *user-renamed* titles only. Auto
+            // saves leave it untouched so the listing falls back to the jsonl
+            // first-message sniff, matching what the CLI's --resume shows.
+            let titleToWrite: String?
+            if persistTitle {
+                titleToWrite = session.title
+            } else {
+                titleToWrite = await metaStore.load(sessionId: session.id).title
+            }
             await metaStore.save(
                 sessionId: session.id,
                 meta: SessionMetaStore.Meta(
-                    title: session.title,
+                    title: titleToWrite,
                     isPinned: session.isPinned,
                     model: session.model,
                     effort: session.effort,
@@ -123,23 +133,33 @@ actor PersistenceService {
         return summaries.sorted { $0.updatedAt > $1.updatedAt }
     }
 
-    func deleteSession(projectId: UUID, sessionId: String, origin: SessionOrigin) async throws {
+    func deleteSession(projectId: UUID, sessionId: String, origin: SessionOrigin, cwd: String?) async throws {
         switch origin {
         case .cliBacked:
-            // Don't delete the CLI's jsonl — the user may still want it from
-            // the terminal. Just clear our sidecar.
             await metaStore.delete(sessionId: sessionId)
-        case .legacyClarc:
-            let url = baseURL
-                .appendingPathComponent("sessions")
-                .appendingPathComponent(projectId.uuidString)
-                .appendingPathComponent("\(sessionId).json")
-            let fm = FileManager.default
-            if fm.fileExists(atPath: url.path) {
-                try fm.removeItem(at: url)
-                logger.debug("Deleted legacy session \(sessionId, privacy: .public)")
+            if let cwd {
+                await cliStore.deleteSession(sid: sessionId, cwd: cwd)
+            } else {
+                logger.warning("Skipping CLI jsonl delete for \(sessionId, privacy: .public): cwd unavailable")
             }
+            // Pre-cli-sync builds wrote a Clarc-side json with the same sid. If
+            // it survives, the merge in AppState falls back to it after the
+            // jsonl is gone and the entry resurrects on the next reload.
+            try removeLegacySessionFile(projectId: projectId, sessionId: sessionId)
+        case .legacyClarc:
+            try removeLegacySessionFile(projectId: projectId, sessionId: sessionId)
         }
+    }
+
+    private func removeLegacySessionFile(projectId: UUID, sessionId: String) throws {
+        let url = baseURL
+            .appendingPathComponent("sessions")
+            .appendingPathComponent(projectId.uuidString)
+            .appendingPathComponent("\(sessionId).json")
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path) else { return }
+        try fm.removeItem(at: url)
+        logger.debug("Deleted legacy session \(sessionId, privacy: .public)")
     }
 
     /// Loads the full message history. Routes by `origin`:

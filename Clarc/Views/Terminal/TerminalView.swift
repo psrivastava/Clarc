@@ -32,6 +32,7 @@ struct EmbeddedTerminalView: NSViewRepresentable {
     var initialCommand: String?
     var onProcessTerminated: ((Int32) -> Void)?
     var process: TerminalProcess?
+    var focusTrigger: UUID? = nil
 
     func makeNSView(context: Context) -> LocalProcessTerminalView {
         let tv = LocalProcessTerminalView(frame: .zero)
@@ -67,7 +68,15 @@ struct EmbeddedTerminalView: NSViewRepresentable {
         return tv
     }
 
-    func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {}
+    func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {
+        if let focus = focusTrigger,
+           focus != context.coordinator.lastFocusTrigger {
+            context.coordinator.lastFocusTrigger = focus
+            DispatchQueue.main.async {
+                nsView.window?.makeFirstResponder(nsView)
+            }
+        }
+    }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onTerminated: onProcessTerminated)
@@ -112,6 +121,7 @@ struct EmbeddedTerminalView: NSViewRepresentable {
 
     final class Coordinator: NSObject, LocalProcessTerminalViewDelegate {
         nonisolated(unsafe) let onTerminated: ((Int32) -> Void)?
+        nonisolated(unsafe) var lastFocusTrigger: UUID? = nil
 
         nonisolated init(onTerminated: ((Int32) -> Void)?) {
             self.onTerminated = onTerminated

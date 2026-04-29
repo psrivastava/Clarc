@@ -407,6 +407,8 @@ struct InspectorPanel: View {
     @State private var inspectorProcess = TerminalProcess()
     @State private var terminalResetID = UUID()
     @State private var memoClearID: UUID? = nil
+    @State private var terminalFocusID: UUID? = nil
+    @State private var memoFocusID: UUID? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -446,7 +448,8 @@ struct InspectorPanel: View {
                 executable: "/bin/zsh",
                 arguments: ["-il"],
                 currentDirectory: windowState.selectedProject?.path,
-                process: inspectorProcess
+                process: inspectorProcess,
+                focusTrigger: terminalFocusID
             )
             .id(terminalResetID)
             .padding(8)
@@ -454,7 +457,9 @@ struct InspectorPanel: View {
             .frame(maxHeight: windowState.inspectorTab == .terminal ? .infinity : 0)
             .clipped()
 
-            InspectorMemoPanel(projectId: windowState.selectedProject?.id, clearTrigger: memoClearID)
+            InspectorMemoPanel(projectId: windowState.selectedProject?.id,
+                               clearTrigger: memoClearID,
+                               focusTrigger: memoFocusID)
                 .frame(maxHeight: windowState.inspectorTab == .memo ? .infinity : 0)
                 .clipped()
         }
@@ -465,6 +470,12 @@ struct InspectorPanel: View {
         )
         .opacity(windowState.showInspector ? 1 : 0)
         .clipped()
+        .onChange(of: windowState.inspectorTab) { _, newTab in
+            switch newTab {
+            case .terminal: terminalFocusID = UUID()
+            case .memo: memoFocusID = UUID()
+            }
+        }
     }
 }
 

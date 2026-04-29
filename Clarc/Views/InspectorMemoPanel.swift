@@ -77,11 +77,15 @@ private let kK: UInt16 = 40
 struct InspectorMemoPanel: View {
     var projectId: UUID? = nil
     var clearTrigger: UUID? = nil
+    var focusTrigger: UUID? = nil
     @State private var memoContext = MemoContext()
 
     var body: some View {
         VStack(spacing: 0) {
-            RichEditorView(clearTrigger: clearTrigger, memoContext: memoContext, projectId: projectId)
+            RichEditorView(clearTrigger: clearTrigger,
+                           focusTrigger: focusTrigger,
+                           memoContext: memoContext,
+                           projectId: projectId)
                 .id(projectId)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             MemoFormattingToolbar(context: memoContext)
@@ -245,6 +249,7 @@ private func refreshCheckboxAttachments(_ attr: NSAttributedString) -> NSAttribu
 
 private struct RichEditorView: NSViewRepresentable {
     let clearTrigger: UUID?
+    let focusTrigger: UUID?
     let memoContext: MemoContext
     let projectId: UUID?
 
@@ -302,6 +307,16 @@ private struct RichEditorView: NSViewRepresentable {
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        if let focus = focusTrigger,
+           focus != context.coordinator.lastFocusTrigger {
+            context.coordinator.lastFocusTrigger = focus
+            if let tv = scrollView.documentView as? NSTextView {
+                DispatchQueue.main.async {
+                    tv.window?.makeFirstResponder(tv)
+                }
+            }
+        }
+
         guard let trigger = clearTrigger,
               trigger != context.coordinator.lastClearTrigger else { return }
         context.coordinator.lastClearTrigger = trigger
@@ -318,6 +333,7 @@ private struct RichEditorView: NSViewRepresentable {
     final class Coordinator: NSObject, NSTextViewDelegate {
         let projectId: UUID?
         var lastClearTrigger: UUID? = nil
+        var lastFocusTrigger: UUID? = nil
         var saveTask: Task<Void, Never>?
         var eventMonitor: Any?
 

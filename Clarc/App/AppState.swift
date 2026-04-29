@@ -202,7 +202,7 @@ final class AppState {
 
     // MARK: - CLI Session Sync
 
-    var cliSessionSyncEnabled: Bool = (UserDefaults.standard.object(forKey: "cliSessionSyncEnabled") as? Bool) ?? true {
+    var cliSessionSyncEnabled: Bool = (UserDefaults.standard.object(forKey: "cliSessionSyncEnabled") as? Bool) ?? false {
         didSet {
             UserDefaults.standard.set(cliSessionSyncEnabled, forKey: "cliSessionSyncEnabled")
             Task { [weak self] in

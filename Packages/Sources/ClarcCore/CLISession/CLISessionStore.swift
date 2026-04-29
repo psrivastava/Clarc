@@ -420,13 +420,30 @@ public actor CLISessionStore {
 }
 
 /// Common envelope detection for CLI-internal text wrapped in `<...>` tags
-/// (system reminders, command-name echoes, local-command caveats). Used by
-/// both jsonl summary sniffing and full mapping.
+/// (system reminders, slash-command echoes, local-command caveats, background
+/// task notifications, custom slash-command expansions). Used by both jsonl
+/// summary sniffing and full mapping.
 public enum CLIMetaEnvelope {
     public static func isEnvelope(_ trimmed: String) -> Bool {
-        trimmed.hasPrefix("<local-command-caveat>")
+        if trimmed.hasPrefix("<local-command-caveat>")
             || trimmed.hasPrefix("<local-command-stdout>")
             || trimmed.hasPrefix("<command-name>")
+            || trimmed.hasPrefix("<command-message>")
+            || trimmed.hasPrefix("<command-args>")
             || trimmed.hasPrefix("<system-reminder>")
+            || trimmed.hasPrefix("<task-notification>") {
+            return true
+        }
+        // Custom slash-command expansions: CLI wraps a user-defined command's
+        // template in <{name}-command>...</{name}-command> when the user runs
+        // it. The tag name varies per command, so pattern-match on the suffix.
+        if trimmed.hasPrefix("<"),
+           let endIdx = trimmed.firstIndex(of: ">") {
+            let tag = trimmed[trimmed.index(after: trimmed.startIndex)..<endIdx]
+            if !tag.contains(" ") && tag.hasSuffix("-command") {
+                return true
+            }
+        }
+        return false
     }
 }

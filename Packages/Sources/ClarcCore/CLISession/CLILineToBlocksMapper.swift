@@ -60,7 +60,10 @@ public enum CLILineToBlocksMapper {
             for part in parts {
                 switch part {
                 case .text(let t):
-                    if !t.isEmpty { textsForNewMessage.append(t) }
+                    let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmed.isEmpty else { continue }
+                    if CLIMetaEnvelope.isEnvelope(trimmed) { continue }
+                    textsForNewMessage.append(t)
                 case .toolResult(let id, let content, let isError):
                     foldToolResult(id: id, result: content, isError: isError, into: &messages)
                 case .unknown:

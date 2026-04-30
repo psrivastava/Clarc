@@ -550,7 +550,7 @@ struct InspectorPanel: View {
                 process: inspectorProcess,
                 fontName: appState.terminalFontName,
                 fontSize: appState.terminalFontSize,
-                colorScheme: appState.terminalColorScheme
+                colorScheme: appState.terminalColorScheme,
                 focusTrigger: terminalFocusID
             )
             .id(terminalResetID)

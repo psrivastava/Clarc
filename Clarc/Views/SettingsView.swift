@@ -137,6 +137,9 @@ struct GeneralSettingsTab: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
     // MARK: - Toggle Section
 
     private func toggleSection(

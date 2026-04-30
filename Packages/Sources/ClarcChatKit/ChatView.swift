@@ -88,7 +88,7 @@ public struct ChatView<InputAccessory: View>: View {
     // MARK: - Messages
 
     private var messageScrollView: some View {
-        MessageListView(onTapBackground: { windowState.requestInputFocus = true })
+        MessageListView()
     }
 }
 

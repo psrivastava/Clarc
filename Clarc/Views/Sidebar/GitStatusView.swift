@@ -9,7 +9,7 @@ struct GitStatusView: View {
     @State private var gitStatus: GitStatusInfo = .loading
     @State private var refreshTask: Task<Void, Never>?
     @State private var localBranches: [String] = []
-    @State private var remoteBranches: [String] = []
+    @State private var remoteBranches: [RemoteBranch] = []
     @State private var headWatcher: (any DispatchSourceFileSystemObject)?
 
     var body: some View {
@@ -161,17 +161,9 @@ struct GitStatusView: View {
                 }
             }
 
-            Section("Remote (origin)") {
+            Section("Remote") {
                 ForEach(remoteBranches, id: \.self) { branch in
-                    Button {
-                        // Checkout remote branch and create local tracking branch
-                        Task {
-                            let success = await gitCheckout(branch: branch, at: projectPath)
-                            if success { refresh(); loadBranches() }
-                        }
-                    } label: {
-                        Text(branch)
-                    }
+                    remoteBranchButton(branch)
                 }
                 if remoteBranches.isEmpty {
                     Text("No remote branches")
@@ -196,6 +188,17 @@ struct GitStatusView: View {
         .help("Switch Branch")
         .onAppear { loadBranches() }
         .onChange(of: projectPath) { _, _ in loadBranches() }
+    }
+
+    private func remoteBranchButton(_ branch: RemoteBranch) -> some View {
+        Button {
+            Task {
+                let success = await gitCheckoutRemote(branch: branch, localBranches: localBranches, at: projectPath)
+                if success { refresh(); loadBranches() }
+            }
+        } label: {
+            Text(branch.displayName)
+        }
     }
 
     // MARK: - Branch Loading
@@ -318,46 +321,68 @@ private func fetchGitStatus(at path: String) async -> GitStatusInfo {
 
 struct BranchList {
     var local: [String] = []
-    var remote: [String] = []
+    var remote: [RemoteBranch] = []
+}
+
+struct RemoteBranch: Hashable, Sendable {
+    let remote: String
+    let name: String
+
+    var refName: String { "\(remote)/\(name)" }
+    var displayName: String { refName }
 }
 
 private func fetchGitBranches(at path: String) async -> BranchList {
-    guard let result = await GitHelper.run(["branch", "-a", "--no-color"], at: path) else {
+    guard let result = await GitHelper.run([
+        "for-each-ref",
+        "--format=%(refname)",
+        "refs/heads",
+        "refs/remotes"
+    ], at: path) else {
         return BranchList()
     }
 
     var local: [String] = []
-    var remote: [String] = []
-    var localSet = Set<String>()
+    var remote: [RemoteBranch] = []
 
     for line in result.components(separatedBy: "\n") {
-        var name = line.trimmingCharacters(in: .whitespacesAndNewlines)
-        if name.hasPrefix("* ") { name = String(name.dropFirst(2)) }
-        if name.isEmpty { continue }
-        if name.contains("->") { continue }
+        let refName = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !refName.isEmpty else { continue }
+        guard !refName.hasSuffix("/HEAD") else { continue }
 
-        if name.hasPrefix("remotes/origin/") {
-            let shortName = String(name.dropFirst("remotes/origin/".count))
-            remote.append(shortName)
-        } else {
-            local.append(name)
-            localSet.insert(name)
+        if refName.hasPrefix("refs/heads/") {
+            local.append(String(refName.dropFirst("refs/heads/".count)))
+        } else if refName.hasPrefix("refs/remotes/") {
+            let remoteRef = String(refName.dropFirst("refs/remotes/".count))
+            guard let slashIndex = remoteRef.firstIndex(of: "/") else { continue }
+            let remoteName = String(remoteRef[..<slashIndex])
+            let branchName = String(remoteRef[remoteRef.index(after: slashIndex)...])
+            remote.append(RemoteBranch(remote: remoteName, name: branchName))
         }
     }
 
-    // Exclude branches from remote that already exist locally
-    remote = remote.filter { !localSet.contains($0) }
-
-    return BranchList(local: local.sorted(), remote: remote.sorted())
+    return BranchList(
+        local: local.sorted(),
+        remote: remote.sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+    )
 }
 
 // MARK: - Git Checkout
 
 private func gitCheckout(branch: String, at path: String) async -> Bool {
-    guard let _ = await GitHelper.run(["checkout", branch], at: path) else {
-        return false
+    await GitHelper.run(["switch", branch], at: path) != nil
+}
+
+private func gitCheckoutRemote(branch: RemoteBranch, localBranches: [String], at path: String) async -> Bool {
+    if localBranches.contains(branch.name) {
+        guard await GitHelper.run(["switch", branch.name], at: path) != nil else {
+            return false
+        }
+        _ = await GitHelper.run(["branch", "--set-upstream-to", branch.refName, branch.name], at: path)
+        return true
     }
-    return true
+
+    return await GitHelper.run(["switch", "--track", "-c", branch.name, branch.refName], at: path) != nil
 }
 
 

@@ -185,6 +185,7 @@
 "Install command:" = "Install command:";
 "Check Again" = "Check Again";
 "Get Started" = "Get Started";
+"Share session history with the terminal CLI in ~/.claude/projects/. Turn off to keep Clarc sessions separate. You can change this later in Settings." = "Share session history with the terminal CLI in ~/.claude/projects/. Turn off to keep Clarc sessions separate. You can change this later in Settings.";
 
 // MARK: - GitHubLoginView
 "Connect GitHub to fetch your repo list and add projects with a single click." = "Connect GitHub to fetch your repo list and add projects with a single click.";
@@ -334,8 +335,8 @@
 "Interactive Commands" = "Interactive Commands";
 "Some commands (such as /config, /permissions, /model) open in a full interactive terminal popup sheet, where you can use the interactive CLI interface. The popup closes automatically when the command finishes." = "Some commands (such as /config, /permissions, /model) open in a full interactive terminal popup sheet, where you can use the interactive CLI interface. The popup closes automatically when the command finishes.";
 "Managing Commands" = "Managing Commands";
-"Click the / button in the toolbar, or open Settings → Slash Commands to add, edit, hide, or disable commands. Custom commands and changes to built-in commands are saved per project." = "Click the / button in the toolbar, or open Settings → Slash Commands to add, edit, hide, or disable commands. Custom commands and changes to built-in commands are saved per project.";
-"JSON import/export is supported for backing up or sharing your command set." = "JSON import/export is supported for backing up or sharing your command set.";
+"Click the / button in the toolbar, or open Settings → Slash Commands to add, edit, delete, or disable custom commands. Built-in commands can be edited and enabled or disabled in the app." = "Click the / button in the toolbar, or open Settings → Slash Commands to add, edit, delete, or disable custom commands. Built-in commands can be edited and enabled or disabled in the app.";
+"JSON import/export backs up or shares custom commands only. Built-in commands in imported files are ignored." = "JSON import/export backs up or shares custom commands only. Built-in commands in imported files are ignored.";
 
 // File & Image Attachments
 "Attaching Files" = "Attaching Files";
@@ -486,6 +487,6 @@
 "Dark indigo" = "Dark indigo";
 "Warm yellow" = "Warm yellow";
 "Slash Commands & Shortcuts Tabs" = "Slash Commands & Shortcuts Tabs";
-"The other two Settings tabs manage per-project slash commands and shortcut buttons. Both support JSON import/export so you can back up or share your configuration." = "The other two Settings tabs manage per-project slash commands and shortcut buttons. Both support JSON import/export so you can back up or share your configuration.";
+"The other two Settings tabs manage per-project slash commands and shortcut buttons. Slash command JSON import/export includes custom commands only; shortcut JSON import/export backs up the shortcut set." = "The other two Settings tabs manage per-project slash commands and shortcut buttons. Slash command JSON import/export includes custom commands only; shortcut JSON import/export backs up the shortcut set.";
 "Checking for Updates" = "Checking for Updates";
 "Open Clarc → Check for Updates… to run Sparkle's update check manually. Updates are also checked automatically on launch." = "Open Clarc → Check for Updates… to run Sparkle's update check manually. Updates are also checked automatically on launch.";

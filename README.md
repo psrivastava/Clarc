@@ -39,7 +39,7 @@ Same engine, no terminal required.
 |---------------|----------------|
 | **Native macOS app** | Built with SwiftUI, not Electron. The current v1.2.0 release is about 5.6 MB to download and about 13 MB unpacked, without bundling a browser runtime. |
 | **Project-centric workspace** | Register multiple local repositories, switch between them from project tabs, or open a project in its own window for parallel sessions. In-progress streams keep running in the background while you switch. |
-| **Custom slash commands** | Add, edit, hide, disable, import, and export slash commands. Customizations are stored locally and can be backed up or shared as JSON. |
+| **Custom slash commands** | Add, edit, disable, import, and export custom slash commands. Built-in commands can be edited locally, while JSON import/export stays custom-only. |
 | **Shortcut buttons** | Create quick buttons for prompts or terminal commands you run repeatedly. Terminal-command shortcuts can launch directly into Clarc's interactive terminal popup. |
 | **Built-in file explorer with Git status** | Browse and search project files, toggle hidden files, preview or edit files, inspect Git status, and switch branches from the sidebar. |
 | **Rich-text memo pad per project** | Keep project-specific notes in the inspector panel with headings, lists, checkboxes, links, and Markdown copy/paste support. |
@@ -61,7 +61,7 @@ Same engine, no terminal required.
 | **Model Selection** | Claude Code aliases with localized descriptions, including Opus, Sonnet, Haiku, 1M context, and plan variants. |
 | **File Attachments** | Drag-and-drop files and images. Smart paste detects images, file paths, URLs, and long text. |
 | **Attachment Auto-Preview Settings** | Toggle automatic preview chips separately for URLs, file paths, images, and long text. |
-| **Slash Commands** | Built-in and custom command system with default-command edits, reset, JSON import, and JSON export. |
+| **Slash Commands** | Built-in and custom command system with built-in command edits/toggles and custom-command JSON import/export. |
 | **Shortcut Buttons** | Configurable quick-access buttons for frequent prompts and terminal commands. |
 | **Message Queue** | Queue messages while Claude is responding; cancel queued items with ESC or the remove button. |
 | **Status Line** | Project path, model, 5-hour and 7-day rate limits, context usage, and response time at a glance. |

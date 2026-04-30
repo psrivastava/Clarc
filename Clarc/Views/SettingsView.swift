@@ -79,6 +79,32 @@ struct GeneralSettingsTab: View {
         }
     }
 
+    // MARK: - Toggle Section
+
+    private func toggleSection(
+        title: LocalizedStringKey,
+        label: LocalizedStringKey,
+        detail: LocalizedStringKey,
+        isOn: Binding<Bool>
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: ClaudeTheme.size(13), weight: .semibold))
+
+            Toggle(isOn: isOn) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label)
+                        .font(.system(size: ClaudeTheme.size(13)))
+                    Text(detail)
+                        .font(.system(size: ClaudeTheme.size(11)))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .toggleStyle(.switch)
+        }
+    }
+
     // MARK: - Font Size Section
 
     private var fontSizeSection: some View {
@@ -147,21 +173,12 @@ struct GeneralSettingsTab: View {
     // MARK: - Notifications Section
 
     private func notificationsSection(appState: Binding<Bool>) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Notifications")
-                .font(.system(size: ClaudeTheme.size(13), weight: .semibold))
-
-            Toggle(isOn: appState) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Notify when response completes")
-                        .font(.system(size: ClaudeTheme.size(13)))
-                    Text("Sends a system notification while Clarc is in the background.")
-                        .font(.system(size: ClaudeTheme.size(11)))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .toggleStyle(.switch)
-        }
+        toggleSection(
+            title: "Notifications",
+            label: "Notify when response completes",
+            detail: "Sends a system notification while Clarc is in the background.",
+            isOn: appState
+        )
     }
 
     // MARK: - Theme Section

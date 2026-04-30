@@ -375,12 +375,14 @@ struct ProjectTabButton: View {
 
 struct InspectorTabControl: View {
     @Binding var selection: InspectorTab
+    var onTabClick: (InspectorTab) -> Void = { _ in }
 
     var body: some View {
         HStack(spacing: 2) {
             ForEach(InspectorTab.allCases, id: \.self) { tab in
                 Button {
                     selection = tab
+                    onTabClick(tab)
                 } label: {
                     Text(LocalizedStringKey(tab.rawValue))
                         .font(.system(size: ClaudeTheme.size(13), weight: .medium))
@@ -407,11 +409,23 @@ struct InspectorPanel: View {
     @State private var inspectorProcess = TerminalProcess()
     @State private var terminalResetID = UUID()
     @State private var memoClearID: UUID? = nil
+    @State private var terminalFocusID: UUID? = nil
+    @State private var memoFocusID: UUID? = nil
+
+    private func bumpFocus(for tab: InspectorTab) {
+        switch tab {
+        case .terminal: terminalFocusID = UUID()
+        case .memo: memoFocusID = UUID()
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                InspectorTabControl(selection: Bindable(windowState).inspectorTab)
+                InspectorTabControl(
+                    selection: Bindable(windowState).inspectorTab,
+                    onTabClick: { tab in bumpFocus(for: tab) }
+                )
 
                 Spacer()
 
@@ -446,7 +460,8 @@ struct InspectorPanel: View {
                 executable: "/bin/zsh",
                 arguments: ["-il"],
                 currentDirectory: windowState.selectedProject?.path,
-                process: inspectorProcess
+                process: inspectorProcess,
+                focusTrigger: terminalFocusID
             )
             .id(terminalResetID)
             .padding(8)
@@ -454,7 +469,9 @@ struct InspectorPanel: View {
             .frame(maxHeight: windowState.inspectorTab == .terminal ? .infinity : 0)
             .clipped()
 
-            InspectorMemoPanel(projectId: windowState.selectedProject?.id, clearTrigger: memoClearID)
+            InspectorMemoPanel(projectId: windowState.selectedProject?.id,
+                               clearTrigger: memoClearID,
+                               focusTrigger: memoFocusID)
                 .frame(maxHeight: windowState.inspectorTab == .memo ? .infinity : 0)
                 .clipped()
         }
@@ -465,6 +482,12 @@ struct InspectorPanel: View {
         )
         .opacity(windowState.showInspector ? 1 : 0)
         .clipped()
+        .onChange(of: windowState.inspectorTab) { _, newTab in
+            bumpFocus(for: newTab)
+        }
+        .onChange(of: windowState.showInspector) { _, isShowing in
+            if isShowing { bumpFocus(for: windowState.inspectorTab) }
+        }
     }
 }
 

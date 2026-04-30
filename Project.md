@@ -124,3 +124,14 @@ Resolved 4 conflicts:
 | `ChatView.swift` | Keep theirs + keep ContextProgressBar | Blocks 1&2: upstream shortcut bar relocated to InputBarView, background token changed to `ClaudeTheme.background`. Block 3: kept both — fork's `ContextProgressBar` struct + upstream's `ChatView` convenience init extension |
 
 **Strategy:** Upstream relocated shortcut bar into InputBarView (better placement) and changed background token — keep theirs. ContextProgressBar is an independent fork feature (context usage indicator) — preserved alongside upstream's convenience init.
+
+### 2026-04-29 — Merge `origin/main` → `psrivastava` (`6bb24cf`)
+
+| File | Resolution | Details |
+|------|-----------|---------|
+| `AppState.swift` (×2) | Keep both | Fork's `openProjectIds.insert` + upstream's `watchProjectDirectory` — independent features in both `addProject` overloads |
+| `MainView.swift` | Keep both | Fork's terminal styling params (`fontName`, `fontSize`, `colorScheme`) + upstream's `focusTrigger` for keyboard focus |
+| `SettingsView.swift` | Keep both | Fork's `sidebarSection` (default tab, visible tabs) + upstream's `toggleSection` reusable helper with scaled sizing |
+| `TerminalView.swift` | Keep both | Fork's terminal styling properties + upstream's `focusTrigger` property |
+
+**Strategy:** All 5 conflicts were independent additions (fork features vs upstream features) — kept both sides in every case.

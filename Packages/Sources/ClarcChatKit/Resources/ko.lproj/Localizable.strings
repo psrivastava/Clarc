@@ -15,7 +15,7 @@
 "Slash Command Manager" = "슬래시 커맨드 관리자";
 "%lld commands" = "%lld개 커맨드";
 "Reset Defaults" = "기본값 초기화";
-"Restore modified/deleted default commands to their original state" = "수정 또는 삭제된 기본 커맨드를 원래 상태로 복원합니다";
+"Restore modified default commands to their original state" = "수정한 기본 커맨드를 원래 상태로 복원합니다";
 "Export" = "내보내기";
 "Export custom commands to a JSON file" = "커스텀 커맨드를 JSON 파일로 내보냅니다";
 "Import" = "가져오기";
@@ -33,7 +33,7 @@
 "Reset Default Commands" = "기본 커맨드 초기화";
 "Reset" = "초기화";
 "Cancel" = "취소";
-"All modified or deleted default commands will be restored to their original state." = "수정하거나 삭제한 모든 기본 커맨드가 원래 상태로 복원됩니다.";
+"All modified default commands will be restored to their original state." = "수정한 모든 기본 커맨드가 원래 상태로 복원됩니다.";
 "Import Succeeded" = "가져오기 성공";
 "Import Failed" = "가져오기 실패";
 "OK" = "확인";
@@ -54,6 +54,31 @@
 "Export Slash Commands" = "슬래시 커맨드 내보내기";
 "Import Slash Commands" = "슬래시 커맨드 가져오기";
 "Invalid JSON format." = "유효하지 않은 JSON 형식입니다.";
+"Imported %lld custom commands." = "%lld개 커스텀 커맨드를 가져왔습니다.";
+"A command with this name already exists." = "이미 존재하는 커맨드 이름입니다.";
+"Clarc slash command export file." = "Clarc 슬래시 커맨드 내보내기 파일입니다.";
+"Usage:" = "사용법:";
+"Edit the array below to add, remove, or change custom slash commands." = "아래 배열을 편집해서 커스텀 슬래시 커맨드를 추가, 삭제, 변경하세요.";
+"The leading slash is optional while editing names; Clarc saves names without it." = "이름을 편집할 때 앞의 /는 선택사항입니다. Clarc는 / 없이 저장합니다.";
+"Built-in command names are ignored on import and are never exported." = "기본 명령어 이름은 가져올 때 무시되며 내보내기에 포함되지 않습니다.";
+"Each custom command supports these properties:" = "각 커스텀 커맨드는 다음 속성을 지원합니다:";
+"name: command name without the leading slash." = "name: 앞의 /를 제외한 커맨드 이름입니다.";
+"description: short text shown in the command picker." = "description: 커맨드 선택기에 표시되는 짧은 설명입니다.";
+"detailDescription: optional longer text shown in command details. Use null or omit it when empty." = "detailDescription: 커맨드 상세에 표시되는 선택적 긴 설명입니다. 비어 있으면 null을 쓰거나 생략하세요.";
+"acceptsInput: true lets users type additional text after the command." = "acceptsInput: true이면 커맨드 뒤에 추가 텍스트를 입력할 수 있습니다.";
+"isInteractive: true runs the command in the interactive terminal." = "isInteractive: true이면 인터랙티브 터미널에서 실행됩니다.";
+"All properties example:" = "모든 속성 예시:";
+"Short description shown in the command picker" = "커맨드 선택기에 표시되는 짧은 설명";
+"Optional longer description shown in command details" = "커맨드 상세에 표시되는 선택적 긴 설명";
+"Clarc shortcut export file." = "Clarc 단축키 내보내기 파일입니다.";
+"Edit the array below to add, remove, or change shortcuts." = "아래 배열을 편집해서 단축키를 추가, 삭제, 변경하세요.";
+"Each shortcut supports these properties:" = "각 단축키는 다음 속성을 지원합니다:";
+"id: optional unique identifier (UUID). Auto-generated on import if omitted." = "id: 선택적 고유 식별자 (UUID). 가져올 때 생략하면 자동 생성됩니다.";
+"name: label shown on the shortcut button." = "name: 단축키 버튼에 표시되는 이름입니다.";
+"message: text sent to Claude, or command run in the terminal." = "message: Claude에 전송할 텍스트 또는 터미널에서 실행할 커맨드입니다.";
+"isTerminalCommand: true runs the message as a terminal command instead of sending it to chat." = "isTerminalCommand: true이면 채팅 대신 터미널 커맨드로 실행됩니다.";
+"Shortcut button label" = "단축키 버튼 이름";
+"Message sent to Claude or command run in terminal" = "Claude에 전송할 메시지 또는 터미널에서 실행할 커맨드";
 
 // MARK: - ShortcutManagerView
 "Shortcut Manager" = "단축키 관리자";
@@ -155,7 +180,6 @@
 "Copy last response to clipboard" = "마지막 응답을 클립보드에 복사";
 "Export conversation as text" = "현재 대화를 텍스트로 내보내기";
 "Create a branch of current conversation" = "현재 대화의 브랜치 생성";
-"Resume a previous conversation" = "이전 대화 재개";
 "Rewind to a previous point" = "이전 시점으로 되돌리기";
 "Rename session" = "세션 이름 변경";
 "Diff viewer for uncommitted changes" = "미커밋 변경사항 diff 뷰어";
@@ -230,3 +254,4 @@
 
 // MARK: - AskUserQuestionView
 "Question" = "질문";
+

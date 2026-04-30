@@ -185,6 +185,7 @@
 "Install command:" = "설치 커맨드:";
 "Check Again" = "다시 확인";
 "Get Started" = "시작하기";
+"Share session history with the terminal CLI in ~/.claude/projects/. Turn off to keep Clarc sessions separate. You can change this later in Settings." = "~/.claude/projects/의 터미널 CLI와 세션 기록을 공유합니다. 끄면 Clarc 세션을 분리해서 사용합니다. 이후 설정에서 변경할 수 있습니다.";
 
 // MARK: - GitHubLoginView
 "Connect GitHub to fetch your repo list and add projects with a single click." = "GitHub를 연결하면 저장소 목록을 가져오고 한 번의 클릭으로 프로젝트를 추가할 수 있습니다.";
@@ -334,8 +335,8 @@
 "Interactive Commands" = "인터랙티브 커맨드";
 "Some commands (such as /config, /permissions, /model) open in a full interactive terminal popup sheet, where you can use the interactive CLI interface. The popup closes automatically when the command finishes." = "/config, /permissions, /model 등 일부 커맨드는 별도의 인터랙티브 터미널 팝업 시트에서 실행됩니다. 커맨드가 완료되면 자동으로 닫힙니다.";
 "Managing Commands" = "커맨드 관리";
-"Click the / button in the toolbar, or open Settings → Slash Commands to add, edit, hide, or disable commands. Custom commands and changes to built-in commands are saved per project." = "툴바의 / 버튼을 클릭하거나 설정 → 슬래시 커맨드를 열어 커맨드를 추가, 편집, 숨김 또는 비활성화할 수 있습니다. 변경사항은 프로젝트별로 저장됩니다.";
-"JSON import/export is supported for backing up or sharing your command set." = "커맨드 세트를 백업하거나 공유하기 위한 JSON 가져오기/내보내기를 지원합니다.";
+"Click the / button in the toolbar, or open Settings → Slash Commands to add, edit, delete, or disable custom commands. Built-in commands can be edited and enabled or disabled in the app." = "툴바의 / 버튼을 클릭하거나 설정 → 슬래시 커맨드를 열어 커스텀 커맨드를 추가, 편집, 삭제 또는 비활성화할 수 있습니다. 기본 커맨드는 앱 안에서 내용 편집과 활성화/비활성화를 할 수 있습니다.";
+"JSON import/export backs up or shares custom commands only. Built-in commands in imported files are ignored." = "JSON 가져오기/내보내기는 커스텀 커맨드만 백업하거나 공유합니다. 가져온 파일의 기본 커맨드는 무시됩니다.";
 
 // File & Image Attachments
 "Attaching Files" = "파일 첨부";
@@ -486,6 +487,6 @@
 "Dark indigo" = "어두운 인디고";
 "Warm yellow" = "따뜻한 옐로우";
 "Slash Commands & Shortcuts Tabs" = "슬래시 커맨드 및 단축키 탭";
-"The other two Settings tabs manage per-project slash commands and shortcut buttons. Both support JSON import/export so you can back up or share your configuration." = "나머지 두 설정 탭은 프로젝트별 슬래시 커맨드와 단축 버튼을 관리합니다. 두 탭 모두 JSON 가져오기/내보내기를 지원하므로 설정을 백업하거나 공유할 수 있습니다.";
+"The other two Settings tabs manage per-project slash commands and shortcut buttons. Slash command JSON import/export includes custom commands only; shortcut JSON import/export backs up the shortcut set." = "나머지 두 설정 탭은 프로젝트별 슬래시 커맨드와 단축 버튼을 관리합니다. 슬래시 커맨드 JSON 가져오기/내보내기는 커스텀 커맨드만 포함하고, 단축 버튼 JSON 가져오기/내보내기는 단축 버튼 세트를 백업합니다.";
 "Checking for Updates" = "업데이트 확인";
 "Open Clarc → Check for Updates… to run Sparkle's update check manually. Updates are also checked automatically on launch." = "Clarc → 업데이트 확인…을 통해 Sparkle 업데이트 확인을 수동으로 실행할 수 있습니다. 앱 시작 시에도 자동으로 확인됩니다.";

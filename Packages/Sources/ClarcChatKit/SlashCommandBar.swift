@@ -65,12 +65,12 @@ public enum SlashCommandRegistry {
     }
 
     private static func buildCommands() -> [SlashCommand] {
+        let modifiedDefaults = sanitizedModifiedDefaults(from: store.modifiedDefaults)
         var result: [SlashCommand] = []
-        for cmd in defaultCommands {
-            if store.hiddenDefaults.contains(cmd.name) { continue }
-            result.append(store.modifiedDefaults[cmd.name] ?? cmd)
+        for command in defaultCommands {
+            result.append(modifiedDefaults[command.name] ?? command)
         }
-        result.append(contentsOf: store.customCommands)
+        result.append(contentsOf: sanitizedCustomCommands(from: store.customCommands))
         return result.sorted { $0.name < $1.name }
     }
 
@@ -86,7 +86,6 @@ public enum SlashCommandRegistry {
         SlashCommand(name: "copy", description: "Copy last response to clipboard", acceptsInput: true),
         SlashCommand(name: "export", description: "Export conversation as text", acceptsInput: true, isInteractive: true),
         SlashCommand(name: "branch", description: "Create a branch of current conversation", acceptsInput: true),
-        SlashCommand(name: "resume", description: "Resume a previous conversation", acceptsInput: true),
         SlashCommand(name: "rewind", description: "Rewind to a previous point", isInteractive: true),
         SlashCommand(name: "rename", description: "Rename session", acceptsInput: true),
         SlashCommand(name: "diff", description: "Diff viewer for uncommitted changes", isInteractive: true),
@@ -172,6 +171,60 @@ public enum SlashCommandRegistry {
         SlashCommand(name: "exit", description: "Exit CLI"),
     ]
 
+    private static var defaultCommandKeys: Set<String> {
+        Set(defaultCommands.map { commandKey($0.name) })
+    }
+
+    static func normalizedNameForInput(_ name: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return String(trimmed.drop { $0 == "/" })
+    }
+
+    private static func commandKey(_ name: String) -> String {
+        normalizedNameForInput(name).lowercased()
+    }
+
+    static func namesMatch(_ lhs: String, _ rhs: String) -> Bool {
+        commandKey(lhs) == commandKey(rhs)
+    }
+
+    private static func sanitizedCustomCommands(from commands: [SlashCommand]) -> [SlashCommand] {
+        var result: [SlashCommand] = []
+        for command in commands {
+            var sanitized = command
+            sanitized.name = normalizedNameForInput(command.name)
+            let key = commandKey(sanitized.name)
+            guard !sanitized.name.isEmpty, !defaultCommandKeys.contains(key) else { continue }
+            result.removeAll { commandKey($0.name) == key }
+            result.append(sanitized)
+        }
+        return result
+    }
+
+    private static func sanitizedModifiedDefaults(from commands: [String: SlashCommand]) -> [String: SlashCommand] {
+        let byKey = Dictionary(commands.map { (commandKey($0.key), $0.value) }, uniquingKeysWith: { _, last in last })
+        var result: [String: SlashCommand] = [:]
+        for defaultCommand in defaultCommands {
+            guard var modified = byKey[commandKey(defaultCommand.name)] else { continue }
+            modified.name = defaultCommand.name
+            if modified != defaultCommand {
+                result[defaultCommand.name] = modified
+            }
+        }
+        return result
+    }
+
+    private static func normalizedStore(_ store: CustomCommandStore) -> CustomCommandStore {
+        var normalized = store
+        normalized.customCommands = sanitizedCustomCommands(from: store.customCommands)
+        normalized.modifiedDefaults = sanitizedModifiedDefaults(from: store.modifiedDefaults)
+        normalized.hiddenDefaults.removeAll()
+
+        let customKeys = Set(normalized.customCommands.map { commandKey($0.name) })
+        let validKeys = defaultCommandKeys.union(customKeys)
+        normalized.disabledCommands = Set(normalized.disabledCommands.map(commandKey).filter { validKeys.contains($0) })
+        return normalized
+    }
 
     // MARK: - Persistence
 
@@ -187,11 +240,12 @@ public enum SlashCommandRegistry {
         guard let data = try? Data(contentsOf: url),
               let decoded = try? JSONDecoder().decode(CustomCommandStore.self, from: data)
         else { return CustomCommandStore() }
-        return decoded
+        return normalizedStore(decoded)
     }
 
     static func saveStore() {
         do {
+            store = normalizedStore(store)
             let url = storeURL
             let dir = url.deletingLastPathComponent()
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -205,35 +259,45 @@ public enum SlashCommandRegistry {
     }
 
     static func addCustomCommand(_ cmd: SlashCommand) {
+        let custom = sanitizedCustomCommands(from: [cmd])
+        guard let cmd = custom.first else { return }
+        store.customCommands.removeAll { namesMatch($0.name, cmd.name) }
         store.customCommands.append(cmd)
         invalidateCache()
         saveStore()
     }
 
     static func replaceCustomCommand(name: String, with cmd: SlashCommand) {
-        store.customCommands.removeAll { $0.name == name }
+        let custom = sanitizedCustomCommands(from: [cmd])
+        guard let cmd = custom.first else { return }
+        store.customCommands.removeAll { namesMatch($0.name, name) || namesMatch($0.name, cmd.name) }
         store.customCommands.append(cmd)
         invalidateCache()
         saveStore()
     }
 
     static func removeCustomCommand(name: String) {
-        store.customCommands.removeAll { $0.name == name }
+        store.customCommands.removeAll { namesMatch($0.name, name) }
+        store.disabledCommands.remove(commandKey(name))
         invalidateCache()
         saveStore()
     }
 
     static func modifyDefault(originalName: String, modified: SlashCommand) {
-        store.modifiedDefaults[originalName] = modified
+        guard let original = originalDefault(name: originalName) else { return }
+        var modified = modified
+        modified.name = original.name
+        if modified == original {
+            store.modifiedDefaults.removeValue(forKey: original.name)
+        } else {
+            store.modifiedDefaults[original.name] = modified
+        }
         invalidateCache()
         saveStore()
     }
 
     static func hideDefault(name: String) {
-        store.hiddenDefaults.insert(name)
-        store.modifiedDefaults.removeValue(forKey: name)
-        invalidateCache()
-        saveStore()
+        // Default commands cannot be deleted or hidden. Use setEnabled for visibility in the picker.
     }
 
     static func resetAllDefaults() {
@@ -244,80 +308,106 @@ public enum SlashCommandRegistry {
     }
 
     static func isDefault(name: String) -> Bool {
-        defaultCommands.contains { $0.name == name }
+        defaultCommandKeys.contains(commandKey(name))
     }
 
     static func isHidden(name: String) -> Bool {
-        store.hiddenDefaults.contains(name)
+        false
     }
 
     static func isModified(name: String) -> Bool {
-        store.modifiedDefaults[name] != nil
+        guard let original = originalDefault(name: name) else { return false }
+        return store.modifiedDefaults[original.name] != nil
     }
 
     static func isEnabled(name: String) -> Bool {
-        !store.disabledCommands.contains(name)
+        !store.disabledCommands.contains(commandKey(name))
     }
 
     static func setEnabled(name: String, _ enabled: Bool) {
+        let key = commandKey(name)
         if enabled {
-            store.disabledCommands.remove(name)
+            store.disabledCommands.remove(key)
         } else {
-            store.disabledCommands.insert(name)
+            store.disabledCommands.insert(key)
         }
         invalidateCache()
         saveStore()
     }
 
     static func originalDefault(name: String) -> SlashCommand? {
-        defaultCommands.first { $0.name == name }
+        defaultCommands.first { namesMatch($0.name, name) }
+    }
+
+    static func customCommandExists(name: String, excluding excludedName: String? = nil) -> Bool {
+        store.customCommands.contains { command in
+            guard namesMatch(command.name, name) else { return false }
+            if let excludedName, namesMatch(command.name, excludedName) { return false }
+            return true
+        }
+    }
+
+    static var customCommandCount: Int {
+        sanitizedCustomCommands(from: store.customCommands).count
     }
 
     // MARK: - Export / Import
 
     static func exportCommands() -> Data? {
-        let customOnly = commands.filter { !isDefault(name: $0.name) }
+        let customOnly = sanitizedCustomCommands(from: store.customCommands)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if customOnly.isEmpty {
-            let example = [SlashCommand(
-                name: "example",
-                description: "Slash command description",
-                detailDescription: "Detail description (optional)",
-                acceptsInput: true,
-                isInteractive: false
-            )]
-            return try? encoder.encode(example)
-        }
-        return try? encoder.encode(customOnly)
+        guard let data = try? encoder.encode(customOnly),
+              let json = String(data: data, encoding: .utf8)
+        else { return nil }
+        return Data((exportCommentHeader() + json + "\n").utf8)
     }
 
     static func importCommands(from data: Data) -> Bool {
-        guard let imported = try? JSONDecoder().decode([SlashCommand].self, from: data) else {
+        let jsonData = data.removingJSONComments()
+        guard let imported = try? JSONDecoder().decode([SlashCommand].self, from: jsonData) else {
             return false
         }
-        let importedByName = Dictionary(imported.map { ($0.name, $0) }, uniquingKeysWith: { _, last in last })
-
         var newStore = CustomCommandStore()
+        newStore.customCommands = sanitizedCustomCommands(from: imported)
 
-        for def in defaultCommands {
-            if let imp = importedByName[def.name] {
-                if imp != def {
-                    newStore.modifiedDefaults[def.name] = imp
-                }
-            } else {
-                newStore.hiddenDefaults.insert(def.name)
-            }
-        }
+        let customKeys = Set(newStore.customCommands.map { commandKey($0.name) })
+        let validKeys = defaultCommandKeys.union(customKeys)
+        newStore.disabledCommands = Set(store.disabledCommands.map(commandKey).filter { validKeys.contains($0) })
 
-        for imp in imported where !isDefault(name: imp.name) {
-            newStore.customCommands.append(imp)
-        }
-
-        store = newStore
+        store = normalizedStore(newStore)
         invalidateCache()
         saveStore()
         return true
+    }
+
+    private static func exportCommentHeader() -> String {
+        let commentLines = [
+            String(localized: "Clarc slash command export file.", bundle: .module),
+            String(localized: "Usage:", bundle: .module),
+            String(localized: "Edit the array below to add, remove, or change custom slash commands.", bundle: .module),
+            String(localized: "The leading slash is optional while editing names; Clarc saves names without it.", bundle: .module),
+            String(localized: "Built-in command names are ignored on import and are never exported.", bundle: .module),
+            String(localized: "Each custom command supports these properties:", bundle: .module),
+            String(localized: "name: command name without the leading slash.", bundle: .module),
+            String(localized: "description: short text shown in the command picker.", bundle: .module),
+            String(localized: "detailDescription: optional longer text shown in command details. Use null or omit it when empty.", bundle: .module),
+            String(localized: "acceptsInput: true lets users type additional text after the command.", bundle: .module),
+            String(localized: "isInteractive: true runs the command in the interactive terminal.", bundle: .module),
+            "",
+            String(localized: "All properties example:", bundle: .module),
+            "{",
+            "  \"acceptsInput\": true,",
+            "  \"description\": \"\(String(localized: "Short description shown in the command picker", bundle: .module))\",",
+            "  \"detailDescription\": \"\(String(localized: "Optional longer description shown in command details", bundle: .module))\",",
+            "  \"isInteractive\": false,",
+            "  \"name\": \"example-command\"",
+            "}",
+            "",
+        ]
+        return commentLines.map { line in
+            line.isEmpty ? "//" : "// \(line)"
+        }.joined(separator: "\n") + "\n"
     }
 
     static var enabledCommands: [SlashCommand] {
@@ -339,6 +429,77 @@ public enum SlashCommandRegistry {
             }
         }
         return nameMatches + descriptionMatches
+    }
+}
+
+extension Data {
+    func removingJSONComments() -> Data {
+        let bytes = Array(self)
+        var output: [UInt8] = []
+        output.reserveCapacity(bytes.count)
+
+        var index = 0
+        var isInString = false
+        var isEscaped = false
+        var isInLineComment = false
+        var isInBlockComment = false
+
+        while index < bytes.count {
+            let byte = bytes[index]
+            let next = index + 1 < bytes.count ? bytes[index + 1] : nil
+
+            if isInLineComment {
+                if byte == 0x0A || byte == 0x0D {
+                    isInLineComment = false
+                    output.append(byte)
+                }
+                index += 1
+                continue
+            }
+
+            if isInBlockComment {
+                if byte == 0x2A, next == 0x2F {
+                    isInBlockComment = false
+                    index += 2
+                } else {
+                    if byte == 0x0A || byte == 0x0D {
+                        output.append(byte)
+                    }
+                    index += 1
+                }
+                continue
+            }
+
+            if isInString {
+                output.append(byte)
+                if isEscaped {
+                    isEscaped = false
+                } else if byte == 0x5C {
+                    isEscaped = true
+                } else if byte == 0x22 {
+                    isInString = false
+                }
+                index += 1
+                continue
+            }
+
+            if byte == 0x22 {
+                isInString = true
+                output.append(byte)
+                index += 1
+            } else if byte == 0x2F, next == 0x2F {
+                isInLineComment = true
+                index += 2
+            } else if byte == 0x2F, next == 0x2A {
+                isInBlockComment = true
+                index += 2
+            } else {
+                output.append(byte)
+                index += 1
+            }
+        }
+
+        return Data(output)
     }
 }
 

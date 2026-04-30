@@ -72,7 +72,7 @@ public struct SlashCommandManagerView: View {
             Button(String(localized: "Reset", bundle: .module), role: .destructive) { resetDefaults() }
             Button(String(localized: "Cancel", bundle: .module), role: .cancel) {}
         } message: {
-            Text("All modified or deleted default commands will be restored to their original state.", bundle: .module)
+            Text("All modified default commands will be restored to their original state.", bundle: .module)
         }
         .alert(importSuccess ? "Import Succeeded" : "Import Failed", isPresented: $showImportResult) {
             Button("OK") {}
@@ -103,7 +103,7 @@ public struct SlashCommandManagerView: View {
             }
             .buttonStyle(.borderless)
             .foregroundStyle(.secondary)
-            .help("Restore modified/deleted default commands to their original state")
+            .help("Restore modified default commands to their original state")
 
             Button { exportCommands() } label: {
                 Label(String(localized: "Export", bundle: .module), systemImage: "square.and.arrow.up")
@@ -225,78 +225,90 @@ public struct SlashCommandManagerView: View {
         }
     }
 
+    @ViewBuilder
     private func commandRow(_ cmd: SlashCommand) -> some View {
         let isEnabled = SlashCommandRegistry.isEnabled(name: cmd.name)
         let isDefaultCmd = SlashCommandRegistry.isDefault(name: cmd.name)
 
-        return Button {
+        Button {
             editingCommand = cmd
         } label: {
-            HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(cmd.command)
-                            .font(.system(size: ClaudeTheme.size(13), weight: .semibold, design: .monospaced))
-                            .foregroundStyle(isEnabled ? Color.primary : Color.secondary)
+            commandRowContent(cmd, isEnabled: isEnabled, isDefault: isDefaultCmd, showsDisclosure: true)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .opacity(isEnabled ? 1.0 : 0.5)
+    }
 
-                        if isDefaultCmd {
-                            Text("default", bundle: .module)
-                                .font(.system(size: ClaudeTheme.size(9)))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .background(Color(NSColor.controlBackgroundColor), in: Capsule())
-                        }
+    private func commandRowContent(
+        _ cmd: SlashCommand,
+        isEnabled: Bool,
+        isDefault: Bool,
+        showsDisclosure: Bool
+    ) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(cmd.command)
+                        .font(.system(size: ClaudeTheme.size(13), weight: .semibold, design: .monospaced))
+                        .foregroundStyle(isEnabled ? Color.primary : Color.secondary)
 
-                        if cmd.acceptsInput {
-                            Text("accepts input", bundle: .module)
-                                .font(.system(size: ClaudeTheme.size(9)))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .background(Color(NSColor.controlBackgroundColor), in: Capsule())
-                        }
-
-                        if cmd.isInteractive {
-                            Text("terminal", bundle: .module)
-                                .font(.system(size: ClaudeTheme.size(9)))
-                                .foregroundStyle(Color.accentColor)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .background(Color.accentColor.opacity(0.08), in: Capsule())
-                        }
+                    if isDefault {
+                        Text("default", bundle: .module)
+                            .font(.system(size: ClaudeTheme.size(9)))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color(NSColor.controlBackgroundColor), in: Capsule())
                     }
 
-                    Text(LocalizedStringKey(cmd.description), bundle: .module)
-                        .font(.system(size: ClaudeTheme.size(12)))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    if cmd.acceptsInput {
+                        Text("accepts input", bundle: .module)
+                            .font(.system(size: ClaudeTheme.size(9)))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color(NSColor.controlBackgroundColor), in: Capsule())
+                    }
+
+                    if cmd.isInteractive {
+                        Text("terminal", bundle: .module)
+                            .font(.system(size: ClaudeTheme.size(9)))
+                            .foregroundStyle(Color.accentColor)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.accentColor.opacity(0.08), in: Capsule())
+                    }
                 }
 
-                Spacer()
+                Text(LocalizedStringKey(cmd.description), bundle: .module)
+                    .font(.system(size: ClaudeTheme.size(12)))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
 
-                Toggle(isOn: Binding(
-                    get: { SlashCommandRegistry.isEnabled(name: cmd.name) },
-                    set: { newValue in
-                        SlashCommandRegistry.setEnabled(name: cmd.name, newValue)
-                        refreshList()
-                    }
-                )) { EmptyView() }
-                .toggleStyle(.switch)
-                .labelsHidden()
-                .scaleEffect(0.75)
-                .help(isEnabled ? "Disable" : "Enable")
+            Spacer()
 
+            Toggle(isOn: Binding(
+                get: { SlashCommandRegistry.isEnabled(name: cmd.name) },
+                set: { newValue in
+                    SlashCommandRegistry.setEnabled(name: cmd.name, newValue)
+                    refreshList()
+                }
+            )) { EmptyView() }
+            .toggleStyle(.switch)
+            .labelsHidden()
+            .scaleEffect(0.75)
+            .help(isEnabled ? "Disable" : "Enable")
+
+            if showsDisclosure {
                 Image(systemName: "chevron.right")
                     .font(.system(size: ClaudeTheme.size(10)))
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .opacity(isEnabled ? 1.0 : 0.5)
     }
 
     // MARK: - Empty State
@@ -339,11 +351,8 @@ public struct SlashCommandManagerView: View {
     }
 
     private func deleteCommand(_ cmd: SlashCommand) {
-        if SlashCommandRegistry.isDefault(name: cmd.name) {
-            SlashCommandRegistry.hideDefault(name: cmd.name)
-        } else {
-            SlashCommandRegistry.removeCustomCommand(name: cmd.name)
-        }
+        guard !SlashCommandRegistry.isDefault(name: cmd.name) else { return }
+        SlashCommandRegistry.removeCustomCommand(name: cmd.name)
         refreshList()
     }
 
@@ -377,7 +386,10 @@ public struct SlashCommandManagerView: View {
                 if SlashCommandRegistry.importCommands(from: data) {
                     refreshList()
                     importSuccess = true
-                    importResultMessage = "Imported \(commandList.count) commands."
+                    importResultMessage = String(
+                        format: String(localized: "Imported %lld custom commands.", bundle: .module),
+                        SlashCommandRegistry.customCommandCount
+                    )
                 } else {
                     importSuccess = false
                     importResultMessage = "Invalid JSON format."
@@ -404,10 +416,21 @@ struct SlashCommandEditView: View {
     @State private var isInteractive: Bool = false
 
     private var isEditing: Bool { command != nil }
+    private var normalizedName: String { SlashCommandRegistry.normalizedNameForInput(name) }
+
+    private var hasNameConflict: Bool {
+        guard !normalizedName.isEmpty else { return false }
+        if isEditing, let command, SlashCommandRegistry.namesMatch(normalizedName, command.name) {
+            return false
+        }
+        if SlashCommandRegistry.isDefault(name: normalizedName) { return true }
+        return SlashCommandRegistry.customCommandExists(name: normalizedName, excluding: command?.name)
+    }
 
     private var isValid: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !desc.trimmingCharacters(in: .whitespaces).isEmpty
+        !normalizedName.isEmpty &&
+        !desc.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !hasNameConflict
     }
 
     var body: some View {
@@ -452,6 +475,12 @@ struct SlashCommandEditView: View {
                         .background(isDefault ? Color(NSColor.controlBackgroundColor) : Color(NSColor.textBackgroundColor))
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color(NSColor.separatorColor).opacity(0.6), lineWidth: 1))
+
+                        if hasNameConflict {
+                            Text("A command with this name already exists.", bundle: .module)
+                                .font(.system(size: ClaudeTheme.size(11)))
+                                .foregroundStyle(.red)
+                        }
                     }
 
                     // Description
@@ -551,9 +580,9 @@ struct SlashCommandEditView: View {
 
                 Button(isEditing ? String(localized: "Save", bundle: .module) : String(localized: "Add", bundle: .module)) {
                     let result = SlashCommand(
-                        name: name.trimmingCharacters(in: .whitespaces),
-                        description: desc.trimmingCharacters(in: .whitespaces),
-                        detailDescription: detailDesc.trimmingCharacters(in: .whitespaces).isEmpty ? nil : detailDesc.trimmingCharacters(in: .whitespaces),
+                        name: normalizedName,
+                        description: desc.trimmingCharacters(in: .whitespacesAndNewlines),
+                        detailDescription: detailDesc.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : detailDesc.trimmingCharacters(in: .whitespacesAndNewlines),
                         acceptsInput: acceptsInput,
                         isInteractive: isInteractive
                     )

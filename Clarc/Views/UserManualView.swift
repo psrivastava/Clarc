@@ -416,8 +416,8 @@ enum ManualTopic: String, CaseIterable, Identifiable {
                 ),
                 ManualSection(
                     title: "Managing Commands",
-                    body: "Click the / button in the toolbar, or open Settings → Slash Commands to add, edit, hide, or disable commands. Custom commands and changes to built-in commands are saved per project.",
-                    note: "JSON import/export is supported for backing up or sharing your command set."
+                    body: "Click the / button in the toolbar, or open Settings → Slash Commands to add, edit, delete, or disable custom commands. Built-in commands can be edited and enabled or disabled in the app.",
+                    note: "JSON import/export backs up or shares custom commands only. Built-in commands in imported files are ignored."
                 ),
             ]
 
@@ -635,7 +635,7 @@ enum ManualTopic: String, CaseIterable, Identifiable {
                 ),
                 ManualSection(
                     title: "Slash Commands & Shortcuts Tabs",
-                    body: "The other two Settings tabs manage per-project slash commands and shortcut buttons. Both support JSON import/export so you can back up or share your configuration."
+                    body: "The other two Settings tabs manage per-project slash commands and shortcut buttons. Slash command JSON import/export includes custom commands only; shortcut JSON import/export backs up the shortcut set."
                 ),
                 ManualSection(
                     title: "Checking for Updates",

@@ -6,7 +6,6 @@ import ClarcCore
 struct MessageListView: View {
     @Environment(ChatBridge.self) private var chatBridge
     @Environment(WindowState.self) private var windowState
-    var onTapBackground: (() -> Void)?
     @State private var scrollPosition = ScrollPosition()
     @State private var settledItems: [ChatMessage] = []
     @State private var scrollTask: Task<Void, Never>?
@@ -136,9 +135,6 @@ struct MessageListView: View {
                 EmptySessionView()
                     .allowsHitTesting(false)
             }
-        }
-        .onTapGesture {
-            onTapBackground?()
         }
     }
 

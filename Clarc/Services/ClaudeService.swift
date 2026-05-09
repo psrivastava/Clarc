@@ -22,10 +22,17 @@ actor ClaudeService {
     /// Per-stream stderr accumulator — used to deliver error messages when process exits without a response
     private var stderrBuffers: [UUID: String] = [:]
 
+    private var streamSessionIds: [UUID: String] = [:]
+
+    private let cliStore: CLISessionStore
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "com.claudework",
         category: "ClaudeService"
     )
+
+    init(cliStore: CLISessionStore) {
+        self.cliStore = cliStore
+    }
 
     // MARK: - Errors
 
@@ -50,6 +57,101 @@ actor ClaudeService {
                 return "Failed to spawn claude process: \(detail)"
             }
         }
+    }
+
+    // MARK: - Shell PATH Resolution
+
+    /// Cached PATH used for spawned subprocesses. Built once on first use.
+    ///
+    /// macOS GUI apps inherit a minimal PATH (`/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin`)
+    /// that excludes Homebrew, nvm, and npm-global locations. Without overriding
+    /// PATH for spawned processes, the `claude` CLI fails with
+    /// `env: node: No such file or directory` when its `node` shebang resolver
+    /// cannot locate Node.
+    private var cachedShellPath: String?
+
+    /// Compose a PATH that lets the spawned `claude` CLI find `node` and
+    /// related tools regardless of where the user installed them.
+    ///
+    /// Combines, in priority order:
+    ///   1. The user's interactive login shell PATH (captures nvm/asdf/.zshrc init)
+    ///   2. Well-known tool directories (Homebrew, npm-global, nvm latest)
+    ///   3. The GUI process's existing PATH as a final fallback
+    private func resolvedShellPath() async -> String {
+        if let cached = cachedShellPath { return cached }
+
+        var paths: [String] = []
+        var seen = Set<String>()
+        func add(_ entry: String) {
+            let trimmed = entry.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty, seen.insert(trimmed).inserted else { return }
+            paths.append(trimmed)
+        }
+
+        if let shellPath = await readUserShellPath() {
+            for component in shellPath.split(separator: ":") { add(String(component)) }
+        }
+
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        for dir in [
+            "/opt/homebrew/bin",
+            "/opt/homebrew/sbin",
+            "/usr/local/bin",
+            "\(home)/.local/bin",
+            "\(home)/.npm-global/bin",
+        ] { add(dir) }
+
+        if let nvmBin = latestNvmBinDirectory(home: home) { add(nvmBin) }
+
+        if let existing = ProcessInfo.processInfo.environment["PATH"] {
+            for component in existing.split(separator: ":") { add(String(component)) }
+        }
+
+        // Double-check after awaits: another reentrant caller may have populated it.
+        if let cached = cachedShellPath { return cached }
+
+        let combined = paths.joined(separator: ":")
+        cachedShellPath = combined
+        logger.info("Resolved shell PATH for subprocess (entries=\(paths.count))")
+        return combined
+    }
+
+    /// Spawn the user's login shell once to read its `$PATH`.
+    /// Uses `-ilc` so `.zshrc` (and the nvm/asdf init it typically sources) runs.
+    private func readUserShellPath() async -> String? {
+        do {
+            let output = try await runShellCommand(
+                "/bin/zsh",
+                arguments: ["-ilc", "print -rn -- $PATH"],
+                injectPath: false
+            )
+            let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        } catch {
+            logger.warning("Failed to read user shell PATH: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// Locate the bin directory of the most recent nvm-installed Node, if any.
+    /// Defends against shell readout failure for nvm users.
+    private func latestNvmBinDirectory(home: String) -> String? {
+        let root = "\(home)/.nvm/versions/node"
+        let fm = FileManager.default
+        guard let entries = try? fm.contentsOfDirectory(atPath: root) else { return nil }
+        for entry in entries.sorted(by: >) {
+            let bin = "\(root)/\(entry)/bin"
+            if fm.isExecutableFile(atPath: "\(bin)/node") { return bin }
+        }
+        return nil
+    }
+
+    /// Build the full environment dictionary for spawned subprocesses,
+    /// inheriting the GUI environment but with PATH replaced by ``resolvedShellPath()``.
+    private func resolvedEnvironment() async -> [String: String] {
+        var env = ProcessInfo.processInfo.environment
+        env["PATH"] = await resolvedShellPath()
+        return env
     }
 
     // MARK: - Binary Discovery
@@ -220,6 +322,7 @@ actor ClaudeService {
                 log.info("[Stream] starting stdout read loop")
 
                 var rawLineCount = 0
+                var capturedSessionId: String?
                 do {
                     for try await line in stdout.fileHandleForReading.bytes.lines {
                         guard !line.isEmpty else { continue }
@@ -233,6 +336,11 @@ actor ClaudeService {
                                 log.info("[Stream:RAW] #\(rawLineCount) type=\(type) line=\(line.prefix(600))")
                             } else if type == "stream_event" || rawLineCount % 50 == 0 {
                                 log.info("[Stream:RAW] #\(rawLineCount) type=\(type)")
+                            }
+                            if capturedSessionId == nil,
+                               let sid = (json["session_id"] as? String) ?? (json["sessionId"] as? String) {
+                                capturedSessionId = sid
+                                Task { await self.recordSessionId(streamId: streamId, sessionId: sid) }
                             }
                         } else if rawLineCount <= 30 {
                             log.info("[Stream:RAW] #\(rawLineCount) non-JSON line=\(line.prefix(600))")
@@ -384,8 +492,9 @@ actor ClaudeService {
         proc.standardOutput = stdoutPipe
         proc.standardError = stderrPipe
 
-        // Inherit a reasonable environment so the CLI can find config files, etc.
-        proc.environment = ProcessInfo.processInfo.environment
+        // Inherit a reasonable environment so the CLI can find config files, etc.,
+        // and override PATH so the `node` shebang in `claude` resolves under GUI launch.
+        proc.environment = await resolvedEnvironment()
 
         let log = logger
         proc.terminationHandler = { [weak self] process in
@@ -394,8 +503,12 @@ actor ClaudeService {
             log.info(
                 "claude process exited — status: \(status), reason: \(reason.rawValue), stream=\(streamId)"
             )
-            // Remove the terminated process from the dictionary (actor isolation guaranteed)
-            Task { await self?.removeProcess(streamId: streamId) }
+            Task {
+                await self?.removeProcess(streamId: streamId)
+                if let sid = await self?.consumeSessionId(streamId: streamId) {
+                    await self?.cliStore.exposeToPicker(sid: sid, cwd: cwd)
+                }
+            }
             onProcessExit?()
         }
 
@@ -461,6 +574,14 @@ actor ClaudeService {
         }
     }
 
+    private func recordSessionId(streamId: UUID, sessionId: String) {
+        streamSessionIds[streamId] = sessionId
+    }
+
+    private func consumeSessionId(streamId: UUID) -> String? {
+        streamSessionIds.removeValue(forKey: streamId)
+    }
+
     /// Read stderr asynchronously, log each line, and buffer for error reporting.
     private nonisolated func readStderr(_ pipe: Pipe, streamId: UUID) {
         let log = logger
@@ -495,10 +616,15 @@ actor ClaudeService {
 
     /// Run a simple command and return its stdout as a String.
     /// Uses async termination handling to avoid blocking the actor's cooperative thread.
+    ///
+    /// `injectPath` controls whether the spawned process receives the resolved
+    /// shell PATH. Set to `false` when this method is itself used to *resolve*
+    /// the shell PATH, to break the chicken-and-egg loop.
     private func runShellCommand(
         _ command: String,
         arguments: [String] = [],
-        cwd: String? = nil
+        cwd: String? = nil,
+        injectPath: Bool = true
     ) async throws -> String {
         let proc = Process()
         let pipe = Pipe()
@@ -507,7 +633,9 @@ actor ClaudeService {
         proc.arguments = arguments
         proc.standardOutput = pipe
         proc.standardError = FileHandle.nullDevice
-        proc.environment = ProcessInfo.processInfo.environment
+        proc.environment = injectPath
+            ? await resolvedEnvironment()
+            : ProcessInfo.processInfo.environment
         if let cwd { proc.currentDirectoryURL = URL(fileURLWithPath: cwd) }
 
         try proc.run()

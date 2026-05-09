@@ -286,7 +286,7 @@ enum ManualTopic: String, CaseIterable, Identifiable {
                 ),
                 ManualSection(
                     title: "Git Status",
-                    body: "The number of changed files is shown at the bottom of the sidebar."
+                    body: "The Git status panel at the bottom of the sidebar shows changed-file counts and the current branch. Click the branch name to switch between local or remote branches."
                 ),
             ]
 
@@ -335,7 +335,7 @@ enum ManualTopic: String, CaseIterable, Identifiable {
                     body: "Use the permission mode dropdown at the top of the chat to control how Claude requests approval before running actions.",
                     items: [
                         KeyValueItem(key: "Ask", value: "Default — prompts for approval before file edits and commands"),
-                        KeyValueItem(key: "Accept", value: "Auto-accepts file edits in the working directory (commands still require approval)"),
+                        KeyValueItem(key: "Accept Edits", value: "Auto-accepts file edits in the working directory (commands still require approval)"),
                         KeyValueItem(key: "Plan", value: "Read-only — analyzes and plans without making edits"),
                         KeyValueItem(key: "Auto", value: "AI auto-approves safe operations, prompts only for risky ones (requires Max/Team/Enterprise/API plan + Sonnet/Opus 4.6+)"),
                         KeyValueItem(key: "Bypass", value: "Skips all permission checks — use only in isolated environments"),
@@ -445,6 +445,16 @@ enum ManualTopic: String, CaseIterable, Identifiable {
                         KeyValueItem(key: "↑ / ↓", value: "Select item"),
                         KeyValueItem(key: "Return / Tab", value: "Insert file path into message"),
                         KeyValueItem(key: "Escape", value: "Close popup"),
+                    ]
+                ),
+                ManualSection(
+                    title: "Auto-Preview Settings",
+                    body: "By default, pasting certain content automatically creates a preview chip. You can toggle each category independently in Settings → Message.",
+                    items: [
+                        KeyValueItem(key: "URL links", value: "Show a preview chip when a URL is detected", symbolName: "link", symbolColor: .accentColor),
+                        KeyValueItem(key: "File paths", value: "Show a preview chip when a file path is detected", symbolName: "doc", symbolColor: .secondary),
+                        KeyValueItem(key: "Images", value: "Show a preview chip when image data is detected", symbolName: "photo", symbolColor: .blue),
+                        KeyValueItem(key: "Long text", value: "Convert long text (200+ characters) into an attachment chip", symbolName: "text.alignleft", symbolColor: .secondary),
                     ]
                 ),
             ]
@@ -594,7 +604,7 @@ enum ManualTopic: String, CaseIterable, Identifiable {
                     body: "Use the permission mode dropdown at the top of the chat to switch how Claude handles permissions.",
                     items: [
                         KeyValueItem(key: "Ask", value: "Default — prompts for approval before file edits and commands"),
-                        KeyValueItem(key: "Accept", value: "Auto-accepts file edits in the working directory (commands still require approval)"),
+                        KeyValueItem(key: "Accept Edits", value: "Auto-accepts file edits in the working directory (commands still require approval)"),
                         KeyValueItem(key: "Plan", value: "Read-only — analyzes and plans without making edits"),
                         KeyValueItem(key: "Auto", value: "AI auto-approves safe operations, prompts only for risky ones (requires Max/Team/Enterprise/API plan + Sonnet/Opus 4.6+)"),
                         KeyValueItem(key: "Bypass", value: "Skips all permission checks — writes to .git/.vscode/.claude directories still require approval"),
@@ -607,19 +617,32 @@ enum ManualTopic: String, CaseIterable, Identifiable {
             [
                 ManualSection(
                     title: "Opening Settings",
-                    body: "Choose Clarc → Settings from the menu bar or press ⌘, to open the Settings window. Settings are organized into three tabs: General, Slash Commands, and Shortcuts."
+                    body: "Choose Clarc → Settings from the menu bar or press ⌘, to open the Settings window. Settings are organized into four tabs: General, Message, Slash Commands, and Shortcuts."
                 ),
                 ManualSection(
                     title: "General Tab",
                     body: "The General tab configures session defaults. Changes apply to newly created sessions — existing sessions keep their current values.",
                     items: [
                         KeyValueItem(key: "Theme", value: "Accent color palette (Terracotta, Ocean, Forest, Lavender, Midnight, Amber)"),
+                        KeyValueItem(key: "Interface Font Size", value: "Adjust the font size for the app UI (sidebar, toolbars, labels)"),
+                        KeyValueItem(key: "Messages Font Size", value: "Adjust the font size in the chat message area"),
                         KeyValueItem(key: "Default Model", value: "Claude model used when starting a new session"),
                         KeyValueItem(key: "Default Permission Mode", value: "Permission mode applied to new sessions"),
                         KeyValueItem(key: "Default Effort Level", value: "Reasoning effort applied to new sessions"),
                         KeyValueItem(key: "Notifications", value: "Show a system notification when a response completes while Clarc is in the background"),
                     ],
                     note: "Model, permission mode, and effort can also be overridden per session from the toolbar — the chosen value sticks to that session."
+                ),
+                ManualSection(
+                    title: "Message Tab",
+                    body: "The Message tab controls chat display and attachment behavior.",
+                    items: [
+                        KeyValueItem(key: "Focus Mode", value: "Enable a focused chat layout that hides the project tab bar and sidebar controls — useful when you want to concentrate on a single conversation"),
+                        KeyValueItem(key: "Auto-Preview URLs", value: "Automatically show a preview chip when a URL is pasted"),
+                        KeyValueItem(key: "Auto-Preview File Paths", value: "Automatically show a preview chip when a file path is pasted"),
+                        KeyValueItem(key: "Auto-Preview Images", value: "Automatically show a preview chip when image data is pasted"),
+                        KeyValueItem(key: "Auto-Preview Long Text", value: "Automatically convert long text (200+ characters) into an attachment chip when pasted"),
+                    ]
                 ),
                 ManualSection(
                     title: "Themes",
@@ -635,7 +658,7 @@ enum ManualTopic: String, CaseIterable, Identifiable {
                 ),
                 ManualSection(
                     title: "Slash Commands & Shortcuts Tabs",
-                    body: "The other two Settings tabs manage per-project slash commands and shortcut buttons. Slash command JSON import/export includes custom commands only; shortcut JSON import/export backs up the shortcut set."
+                    body: "The Slash Commands tab manages built-in and custom commands — edit, enable/disable, add, or delete. JSON import/export covers custom commands only. The Shortcuts tab manages shortcut buttons with JSON import/export support."
                 ),
                 ManualSection(
                     title: "Checking for Updates",

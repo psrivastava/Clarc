@@ -78,7 +78,6 @@ struct ClarcApp: App {
 
 struct MainWindowRoot: View {
     let appState: AppState
-    @Environment(\.openWindow) private var openWindow
     @State private var windowState = WindowState()
     @State private var chatBridge = ChatBridge()
 
@@ -101,8 +100,7 @@ struct MainWindowRoot: View {
                 await appState.initializeWindow(windowState)
                 await NotificationService.shared.requestAuthorizationIfNeeded()
                 NotificationService.shared.onNotificationTapped = { projectId, sessionId in
-                    appState.pendingNotificationSession[projectId] = sessionId
-                    openWindow(id: "project-window", value: ProjectWindowValue(projectId: projectId, instanceId: UUID()))
+                    appState.handleNotificationTap(projectId: projectId, sessionId: sessionId, mainWindow: windowState)
                 }
             }
     }
@@ -151,6 +149,8 @@ struct ProjectWindowRoot: View {
                     windowState.currentSessionId = sessionId
                 }
             }
+            .onAppear { appState.registerOpenProjectWindow(projectId) }
+            .onDisappear { appState.unregisterOpenProjectWindow(projectId) }
             // Apply pending notification navigation (already-open window case)
             .onChange(of: appState.pendingNotificationSession[projectId]) { _, sessionId in
                 guard let sessionId else { return }

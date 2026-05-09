@@ -309,6 +309,45 @@ final class AppState {
     /// Keyed by projectId; consumed once applied.
     var pendingNotificationSession: [UUID: String] = [:]
 
+    /// Ref-counted set of projectIds with at least one open dedicated project window.
+    /// Used to decide whether a notification tap should route to the main window or
+    /// hand off to an existing project window via `pendingNotificationSession`.
+    @ObservationIgnored
+    var openProjectWindowCounts: [UUID: Int] = [:]
+
+    func registerOpenProjectWindow(_ projectId: UUID) {
+        openProjectWindowCounts[projectId, default: 0] += 1
+    }
+
+    func unregisterOpenProjectWindow(_ projectId: UUID) {
+        guard let count = openProjectWindowCounts[projectId] else { return }
+        if count <= 1 {
+            openProjectWindowCounts.removeValue(forKey: projectId)
+        } else {
+            openProjectWindowCounts[projectId] = count - 1
+        }
+    }
+
+    func hasOpenProjectWindow(for projectId: UUID) -> Bool {
+        (openProjectWindowCounts[projectId] ?? 0) > 0
+    }
+
+    /// Routes a notification tap to the right window without spawning a new one.
+    /// Hands off to an existing project window if one is open for that project;
+    /// otherwise navigates the supplied main window in place.
+    func handleNotificationTap(projectId: UUID, sessionId: String, mainWindow: WindowState) {
+        if hasOpenProjectWindow(for: projectId) {
+            pendingNotificationSession[projectId] = sessionId
+            return
+        }
+        if mainWindow.selectedProject?.id == projectId {
+            guard mainWindow.currentSessionId != sessionId else { return }
+            mainWindow.currentSessionId = sessionId
+        } else {
+            selectSession(id: sessionId, in: mainWindow)
+        }
+    }
+
     /// Sets the model for the current session and persists it in the session state.
     func setSessionModel(_ model: String, in window: WindowState) {
         window.sessionModel = model
@@ -389,11 +428,11 @@ final class AppState {
 
     // MARK: - Services
 
-    let claude = ClaudeService()
     let github = GitHubService()
     let permission = PermissionServer()
     let metaStore = SessionMetaStore()
     let cliStore: CLISessionStore
+    let claude: ClaudeService
     let persistence: PersistenceService
     let marketplace = MarketplaceService()
     let directoryWatcher = DirectoryWatcher()
@@ -402,6 +441,7 @@ final class AppState {
         let metaStore = self.metaStore
         let cliStore = CLISessionStore(metaStore: metaStore)
         self.cliStore = cliStore
+        self.claude = ClaudeService(cliStore: cliStore)
         self.persistence = PersistenceService(metaStore: metaStore, cliStore: cliStore)
     }
 
@@ -1020,8 +1060,25 @@ final class AppState {
                 if let start = state.streamingStartDate {
                     state.messages[idx].duration = Date().timeIntervalSince(start)
                 }
+                Self.stripNoOpText(at: idx, in: &state.messages)
             }
             state.streamingStartDate = nil
+        }
+    }
+
+    /// Drop "No response requested." text blocks from the assistant message
+    /// at `idx`. If the message has no blocks left after the strip, remove
+    /// it entirely. Called at turn-finalization sites — the marker is the
+    /// model's response when a turn arrives without a user prompt
+    /// (ScheduleWakeup, hook re-entry) and reads as noise in the chat UI.
+    private static func stripNoOpText(at idx: Int, in messages: inout [ChatMessage]) {
+        guard messages.indices.contains(idx) else { return }
+        messages[idx].blocks.removeAll { block in
+            guard let text = block.text else { return false }
+            return CLIMetaEnvelope.isNoResponseRequested(text.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        if messages[idx].blocks.isEmpty {
+            messages.remove(at: idx)
         }
     }
 
@@ -1233,6 +1290,8 @@ final class AppState {
                         messages: stateForSession(sessionKey).messages
                     )
 
+                    reconcileFromDisk(sessionId: resultEvent.sessionId, projectId: projectId, cwd: cwd)
+
                     if !resultEvent.isError {
                         let sid = resultEvent.sessionId
                         let key = sessionKey
@@ -1395,6 +1454,7 @@ final class AppState {
                     // New Claude turn after receiving tool result — start a new ChatMessage
                     state.messages[idx].isStreaming = false
                     state.messages[idx].finalizeToolCalls()
+                    Self.stripNoOpText(at: idx, in: &state.messages)
                     state.needsNewMessage = false
                     state.messages.append(ChatMessage(role: .assistant, content: buffered, isStreaming: true))
                 } else {
@@ -1442,6 +1502,7 @@ final class AppState {
                         if let idx = state.messages.indices.reversed().first(where: { state.messages[$0].role == .assistant && state.messages[$0].isStreaming }) {
                             state.messages[idx].isStreaming = false
                             state.messages[idx].finalizeToolCalls()
+                            Self.stripNoOpText(at: idx, in: &state.messages)
                         }
                         state.messages.append(ChatMessage(role: .assistant, isStreaming: true))
                         state.needsNewMessage = false
@@ -2447,18 +2508,67 @@ final class AppState {
         }
     }
 
+    /// Last seen jsonl byte size per session — used as a cheap drift signal
+    /// in `reconcileFromDisk` so the no-drift path skips the full mmap+parse.
+    private var lastReconciledJsonlSize: [String: UInt64] = [:]
+
+    /// Build the routing summary for `persistence.loadFullSession`. Falls back
+    /// to a synthesized `.cliBacked` summary when the session hasn't been
+    /// indexed yet (e.g. brand-new session whose `.result` arrived before the
+    /// summary list refresh).
+    private func summaryFor(sessionId: String, projectId: UUID) -> ChatSession.Summary {
+        allSessionSummaries.first(where: { $0.id == sessionId })
+            ?? ChatSession.Summary(
+                id: sessionId, projectId: projectId, title: "",
+                createdAt: Date(), updatedAt: Date(), isPinned: false,
+                origin: .cliBacked
+            )
+    }
+
+    /// Reload messages from the CLI's jsonl on disk and fill any blocks the
+    /// live stream may have missed (e.g. ownership-transfer races, observation
+    /// re-subscribe gaps). Fired off as a detached task so the stream loop is
+    /// not delayed by the mmap parse.
+    ///
+    /// Replacement is gated on disk having strictly more block content than
+    /// memory, so the common no-drift case produces no UI churn. Before the
+    /// parse, the file size is compared against the last seen size — if the
+    /// jsonl hasn't grown, the parse is skipped entirely.
+    private func reconcileFromDisk(sessionId: String, projectId: UUID, cwd: String) {
+        let summary = summaryFor(sessionId: sessionId, projectId: projectId)
+        let lastSize = lastReconciledJsonlSize[sessionId]
+
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+
+            let url = await self.cliStore.directory(forCwd: cwd)
+                .appendingPathComponent("\(sessionId).jsonl")
+            let currentSize: UInt64? = ((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int)
+                .flatMap(UInt64.init(exactly:))
+            if let lastSize, let currentSize, currentSize <= lastSize { return }
+
+            guard let full = await self.persistence.loadFullSession(summary: summary, cwd: cwd) else { return }
+            let cleaned = await self.cleanLoadedMessages(full.messages)
+            await MainActor.run {
+                guard var state = self.sessionStates[sessionId], !state.isStreaming else { return }
+                if let currentSize { self.lastReconciledJsonlSize[sessionId] = currentSize }
+                let memBlocks = state.messages.reduce(0) { $0 + $1.blocks.count }
+                let diskBlocks = cleaned.reduce(0) { $0 + $1.blocks.count }
+                guard diskBlocks > memBlocks else { return }
+                self.logger.info("[Reconcile] sid=\(sessionId, privacy: .public) memBlocks=\(memBlocks) diskBlocks=\(diskBlocks) — applied")
+                state.messages = cleaned
+                self.sessionStates[sessionId] = state
+            }
+        }
+    }
+
     /// Load messages in the background and inject without blocking the main thread.
     /// Does not overwrite if currently streaming or if messages already exist.
     /// `cwd` is needed so we can route to the CLI's jsonl when origin is `.cliBacked`.
     private func loadMessagesInBackground(projectId: UUID, sessionId: String, cwd: String) {
         // Snapshot the summary while we're on MainActor so the detached task
         // can route by origin without awaiting back to us first.
-        let summary = allSessionSummaries.first(where: { $0.id == sessionId })
-            ?? ChatSession.Summary(
-                id: sessionId, projectId: projectId, title: "",
-                createdAt: Date(), updatedAt: Date(), isPinned: false,
-                origin: .cliBacked
-            )
+        let summary = summaryFor(sessionId: sessionId, projectId: projectId)
 
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }

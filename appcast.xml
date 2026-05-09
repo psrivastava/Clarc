@@ -229,6 +229,38 @@
         sparkle:edSignature="3sOvrfwTrqlGd0a3NwS4mW4RKKrk15IP7QdnJHjV9AwSeAV3bU3IGoloidpqkIV9I3J7EZ7n9nWFl6mDIIQwBA==" />
     </item>
     <item>
+      <title>Clarc v1.2.3</title>
+      <sparkle:version>21</sparkle:version>
+      <sparkle:shortVersionString>1.2.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+      <pubDate>Wed, 30 Apr 2026 00:00:00 +0000</pubDate>
+      <description><![CDATA[
+<h3>New</h3>
+<ul>
+  <li>Sessions started in Clarc now appear in the <code>claude --resume</code> picker — switch freely between Clarc and the terminal CLI.</li>
+  <li>Legacy sessions are automatically migrated to the new format.</li>
+</ul>
+<h3>Improved</h3>
+<ul>
+  <li>Session timestamps now reflect actual last activity instead of file modification time.</li>
+  <li>Improved chat text selection and focus behavior.</li>
+  <li>Shortcut and slash command export files now include locale-specific comment headers.</li>
+  <li>Branch list in the sidebar now supports multiple Git remotes.</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+  <li>Fixed Korean IME input losing the final syllable.</li>
+  <li>Clicking a notification now navigates to the current window instead of opening a new one.</li>
+</ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/ttnear/Clarc/releases/download/v1.2.3/Clarc-1.2.3.zip"
+        length="6253605"
+        type="application/octet-stream"
+        sparkle:edSignature="8DdsCPKz4zfFoxnhDt9C2XIhugubv9+cNc+S3R5j793ex0LPt8EaRS+R8++1C9wC6dahOuoF8vN6j408bRpBDg==" />
+    </item>
+
+    <item>
       <title>Clarc v1.2.2</title>
       <sparkle:version>20</sparkle:version>
       <sparkle:shortVersionString>1.2.2</sparkle:shortVersionString>
@@ -251,6 +283,43 @@
         length="5918951"
         type="application/octet-stream"
         sparkle:edSignature="rrpfCh6xwUUR57Ok1k5US2dWYCWsxrWwM2VfxEBYHfbtKjcAIau1IKM7Ay2Y8zVct04tYKRF/J8vgvmuSSrSAw==" />
+    </item>
+    <item>
+      <title>Clarc v1.2.4</title>
+      <sparkle:version>23</sparkle:version>
+      <sparkle:shortVersionString>1.2.4</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+      <pubDate>Thu, 07 May 2026 06:15:08 +0000</pubDate>
+      <description><![CDATA[
+<h3>Fixed</h3>
+<ul>
+  <li>Resolve <code>env: node: No such file or directory</code> error when starting a chat. The app now reads the user's shell <code>PATH</code> so the bundled <code>claude</code> CLI can locate <code>node</code> regardless of where it was installed (Homebrew, nvm, npm-global). (#8)</li>
+</ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/ttnear/Clarc/releases/download/v1.2.4/Clarc-1.2.4.zip"
+        length="6263985"
+        type="application/octet-stream"
+        sparkle:edSignature="wo8bwxHmh7B3iODRlPyDI6FtNgt4bgxp7DmrNM38jrq8FiTcz+EW0+AIwQhPNr4EqSnILeSzAS/q2+Ok4dVcBA==" />
+    </item>
+    <item>
+      <title>Clarc v1.2.5</title>
+      <sparkle:version>24</sparkle:version>
+      <sparkle:shortVersionString>1.2.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+      <pubDate>Thu, 07 May 2026 12:20:34 +0000</pubDate>
+      <description><![CDATA[
+<h3>Fixed</h3>
+<ul>
+  <li>Chat: Messages that occasionally went missing during long agent loops or background tool monitoring are now restored automatically. After each turn the app reconciles in-memory state against the CLI session log so any blocks the live stream skipped fill in without an app restart.</li>
+  <li>Chat: Hide the noisy "No response requested." marker the model emits when a turn arrives without a user prompt (e.g. ScheduleWakeup or hook re-entry). It is now stripped from both live streaming and historical session loads.</li>
+</ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/ttnear/Clarc/releases/download/v1.2.5/Clarc-1.2.5.zip"
+        length="6273658"
+        type="application/octet-stream"
+        sparkle:edSignature="NQ1mzCs8WpjmY6RttGqZXrFo8roFCsL+sBS6krB1kZO3orHCBlyXSaDqzW6p4xhtQEex0GOWF7n/qHxCieSWDg==" />
     </item>
   </channel>
 </rss>

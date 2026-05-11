@@ -11,16 +11,57 @@ struct CLISessionsView: View {
     @Environment(WindowState.self) private var windowState
     @State private var cliProjects: [CLIProject] = []
     @State private var expandedProjects: Set<String> = []
+    @State private var expandedGroups: Set<String> = []
     @State private var sessionTitles: [String: String] = [:]
     @State private var isLoading = true
     @State private var focusedItem: FocusItem?
+    @State private var groupAssignments: [String: String] = {
+        (UserDefaults.standard.dictionary(forKey: "cliSessionGroupAssignments") as? [String: String]) ?? [:]
+    }()
+    @State private var groupEditorTarget: GroupEditorTarget? = nil
+
+    // Grouped layout is automatic: show it whenever at least one group has been created.
+    private var isGrouped: Bool { !allGroupNames.isEmpty }
+
+    // Derived group name → projects list (named groups first, Ungrouped last).
+    private var groupedProjects: [(groupName: String, projects: [CLIProject])] {
+        var dict: [String: [CLIProject]] = [:]
+        for project in cliProjects {
+            let group = groupAssignments[project.path] ?? ""
+            dict[group, default: []].append(project)
+        }
+        return dict.map { ($0.key, $0.value) }
+            .sorted { a, b in
+                if a.0.isEmpty { return false }
+                if b.0.isEmpty { return true }
+                return a.0.localizedCaseInsensitiveCompare(b.0) == .orderedAscending
+            }
+    }
+
+    private var allGroupNames: [String] {
+        Array(Set(groupAssignments.values)).filter { !$0.isEmpty }.sorted()
+    }
 
     private var visibleItems: [FocusItem] {
         var items: [FocusItem] = []
-        for project in cliProjects {
-            items.append(.folder(project.id))
-            if expandedProjects.contains(project.id) {
-                items.append(contentsOf: project.sessions.map { .session($0.id) })
+        if isGrouped {
+            for (group, projects) in groupedProjects {
+                let groupKey = group.isEmpty ? "__ungrouped__" : group
+                items.append(.group(groupKey))
+                guard expandedGroups.contains(groupKey) else { continue }
+                for project in projects {
+                    items.append(.folder(project.id))
+                    if expandedProjects.contains(project.id) {
+                        items.append(contentsOf: project.sessions.map { .session($0.id) })
+                    }
+                }
+            }
+        } else {
+            for project in cliProjects {
+                items.append(.folder(project.id))
+                if expandedProjects.contains(project.id) {
+                    items.append(contentsOf: project.sessions.map { .session($0.id) })
+                }
             }
         }
         return items
@@ -48,6 +89,11 @@ struct CLISessionsView: View {
             }
         }
         .task { await loadCLISessions() }
+        .sheet(item: $groupEditorTarget) { target in
+            GroupNameEditorSheet(target: target) { newName in
+                applyGroupEdit(target: target, name: newName)
+            }
+        }
     }
 
     // MARK: - Header
@@ -81,40 +127,149 @@ struct CLISessionsView: View {
 
     private var sessionList: some View {
         List {
-            ForEach(cliProjects) { project in
-                DisclosureGroup(
-                    isExpanded: Binding(
-                        get: { expandedProjects.contains(project.id) },
-                        set: { if $0 { expandedProjects.insert(project.id) } else { expandedProjects.remove(project.id) } }
-                    )
-                ) {
-                    ForEach(project.sessions) { session in
-                        cliSessionRow(session, projectPath: project.path)
-                    }
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
+            if isGrouped {
+                ForEach(groupedProjects, id: \.groupName) { entry in
+                    let groupKey = entry.groupName.isEmpty ? "__ungrouped__" : entry.groupName
+                    let label = entry.groupName.isEmpty ? "Ungrouped" : entry.groupName
+                    let totalSessions = entry.projects.reduce(0) { $0 + $1.sessions.count }
+
+                    DisclosureGroup(
+                        isExpanded: Binding(
+                            get: { expandedGroups.contains(groupKey) },
+                            set: { if $0 { expandedGroups.insert(groupKey) } else { expandedGroups.remove(groupKey) } }
+                        )
+                    ) {
+                        ForEach(entry.projects) { project in
+                            projectDisclosure(project)
+                        }
+                    } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: "terminal")
+                            Image(systemName: "person.2.fill")
                                 .font(.system(size: 10))
-                                .foregroundStyle(ClaudeTheme.accent)
-                            Text(project.displayName)
-                                .font(.system(size: 13, weight: .medium))
-                                .lineLimit(1)
+                                .foregroundStyle(entry.groupName.isEmpty ? ClaudeTheme.textTertiary : ClaudeTheme.accent)
+                            Text(label)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(entry.groupName.isEmpty ? ClaudeTheme.textTertiary : .primary)
                             Spacer()
-                            Text("\(project.sessions.count)")
+                            Text("\(totalSessions)")
                                 .font(.system(size: 11))
                                 .foregroundStyle(ClaudeTheme.textTertiary)
                         }
-                        Text(project.path)
-                            .font(.system(size: 9))
-                            .foregroundStyle(.secondary.opacity(0.6))
-                            .lineLimit(1)
-                            .truncationMode(.head)
+                        .contentShape(Rectangle())
+                        .contextMenu {
+                            if !entry.groupName.isEmpty {
+                                Button {
+                                    groupEditorTarget = GroupEditorTarget(kind: .rename(from: entry.groupName), projectPath: nil)
+                                } label: {
+                                    Label("Rename Group…", systemImage: "pencil")
+                                }
+                                Divider()
+                                Button(role: .destructive) {
+                                    deleteGroup(named: entry.groupName)
+                                } label: {
+                                    Label("Delete Group", systemImage: "trash")
+                                }
+                            }
+                        }
                     }
+                }
+            } else {
+                ForEach(cliProjects) { project in
+                    projectDisclosure(project)
                 }
             }
         }
         .listStyle(.sidebar)
+    }
+
+    @ViewBuilder
+    private func projectDisclosure(_ project: CLIProject) -> some View {
+        let currentGroup = groupAssignments[project.path]
+
+        DisclosureGroup(
+            isExpanded: Binding(
+                get: { expandedProjects.contains(project.id) },
+                set: { if $0 { expandedProjects.insert(project.id) } else { expandedProjects.remove(project.id) } }
+            )
+        ) {
+            ForEach(project.sessions) { session in
+                cliSessionRow(session, projectPath: project.path)
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Image(systemName: "terminal")
+                        .font(.system(size: 10))
+                        .foregroundStyle(ClaudeTheme.accent)
+                    Text(project.displayName)
+                        .font(.system(size: 13, weight: .medium))
+                        .lineLimit(1)
+                    Spacer()
+                    if let grp = currentGroup {
+                        Text(grp)
+                            .font(.system(size: 9))
+                            .foregroundStyle(ClaudeTheme.accent.opacity(0.7))
+                            .lineLimit(1)
+                    }
+                    Text("\(project.sessions.count)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ClaudeTheme.textTertiary)
+                }
+                Text(project.path)
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary.opacity(0.6))
+                    .lineLimit(1)
+                    .truncationMode(.head)
+            }
+            .contentShape(Rectangle())
+            .contextMenu {
+                groupingContextMenu(for: project)
+                Divider()
+                Button {
+                    if let first = project.sessions.first {
+                        resumeCLISession(first, projectPath: project.path)
+                    }
+                } label: {
+                    Label("Resume Latest Session", systemImage: "play.fill")
+                }
+                .disabled(project.sessions.isEmpty)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func groupingContextMenu(for project: CLIProject) -> some View {
+        let currentGroup = groupAssignments[project.path]
+
+        Menu("Group") {
+            ForEach(allGroupNames, id: \.self) { name in
+                Button {
+                    groupAssignments[project.path] = name
+                    saveGroupAssignments()
+                    expandedGroups.insert(name)
+                } label: {
+                    Label(name, systemImage: currentGroup == name ? "checkmark" : "folder")
+                }
+            }
+
+            if !allGroupNames.isEmpty { Divider() }
+
+            Button {
+                groupEditorTarget = GroupEditorTarget(kind: .create, projectPath: project.path)
+            } label: {
+                Label("New Group…", systemImage: "plus")
+            }
+
+            if currentGroup != nil {
+                Divider()
+                Button(role: .destructive) {
+                    groupAssignments.removeValue(forKey: project.path)
+                    saveGroupAssignments()
+                } label: {
+                    Label("Remove from Group", systemImage: "xmark.circle")
+                }
+            }
+        }
     }
 
     private func cliSessionRow(_ session: CLISession, projectPath: String) -> some View {
@@ -127,7 +282,6 @@ struct CLISessionsView: View {
                     .font(.system(size: 13))
                     .foregroundStyle(.primary.opacity(0.8))
                     .lineLimit(1)
-
                 Text(formattedDate(session.modifiedAt))
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
@@ -142,13 +296,20 @@ struct CLISessionsView: View {
                 .fill(focusedItem == .session(session.id) ? ClaudeTheme.accent.opacity(0.15) : .clear)
                 .padding(.horizontal, -4)
         )
-        .onTapGesture { focusedItem = .session(session.id) }
         .contextMenu {
             Button {
                 resumeCLISession(session, projectPath: projectPath)
             } label: {
                 Label("Resume Session", systemImage: "play.fill")
             }
+
+            Divider()
+
+            if let project = cliProjects.first(where: { $0.path == projectPath }) {
+                groupingContextMenu(for: project)
+            }
+
+            Divider()
 
             Button {
                 NSPasteboard.general.clearContents()
@@ -177,8 +338,6 @@ struct CLISessionsView: View {
     // MARK: - Load Preview
 
     private func loadPreview(_ session: CLISession, projectPath: String) {
-        // Don't replace an active/resumed session with a preview
-        guard windowState.currentSessionId == nil else { return }
         let encoded = AppState.claudeProjectDirName(for: projectPath)
         let home = FileManager.default.homeDirectoryForCurrentUser
         let file = home.appendingPathComponent(".claude/projects/\(encoded)/\(session.id).jsonl")
@@ -197,7 +356,6 @@ struct CLISessionsView: View {
                 let clean = String(content.prefix(120))
                 if !clean.isEmpty { messages.append(clean) }
             }
-            // Also check array-style content
             if messages.isEmpty {
                 for line in lines where messages.count < 3 {
                     guard !line.isEmpty,
@@ -216,7 +374,7 @@ struct CLISessionsView: View {
             }
         }
 
-        windowState.selectedProject = nil
+        guard windowState.selectedProject == nil else { return }
         windowState.previewCLISession = CLISessionPreview(
             sessionId: session.id,
             title: session.title,
@@ -251,8 +409,7 @@ struct CLISessionsView: View {
         let items = visibleItems
         guard !items.isEmpty else { return }
         guard let current = focusedItem, let idx = items.firstIndex(of: current) else {
-            focusedItem = items.first
-            return
+            focusedItem = items.first; return
         }
         let next = idx + delta
         guard items.indices.contains(next) else { return }
@@ -260,16 +417,26 @@ struct CLISessionsView: View {
     }
 
     private func expandFocused() {
-        guard case .folder(let id) = focusedItem else { return }
-        expandedProjects.insert(id)
+        switch focusedItem {
+        case .group(let id): expandedGroups.insert(id)
+        case .folder(let id): expandedProjects.insert(id)
+        case .session, .none: break
+        }
     }
 
     private func collapseFocused() {
         switch focusedItem {
+        case .group(let id):
+            expandedGroups.remove(id)
         case .folder(let id):
             expandedProjects.remove(id)
+            if isGrouped {
+                for (group, projects) in groupedProjects where projects.contains(where: { $0.id == id }) {
+                    focusedItem = .group(group.isEmpty ? "__ungrouped__" : group)
+                    break
+                }
+            }
         case .session(let sid):
-            // Find parent folder and collapse it, move focus to folder
             if let project = cliProjects.first(where: { $0.sessions.contains { $0.id == sid } }) {
                 expandedProjects.remove(project.id)
                 focusedItem = .folder(project.id)
@@ -280,9 +447,10 @@ struct CLISessionsView: View {
 
     private func activateFocused() {
         switch focusedItem {
+        case .group(let id):
+            if expandedGroups.contains(id) { expandedGroups.remove(id) } else { expandedGroups.insert(id) }
         case .folder(let id):
-            if expandedProjects.contains(id) { expandedProjects.remove(id) }
-            else { expandedProjects.insert(id) }
+            if expandedProjects.contains(id) { expandedProjects.remove(id) } else { expandedProjects.insert(id) }
         case .session(let sid):
             if let project = cliProjects.first(where: { $0.sessions.contains { $0.id == sid } }),
                let session = project.sessions.first(where: { $0.id == sid }) {
@@ -292,14 +460,44 @@ struct CLISessionsView: View {
         }
     }
 
-    // MARK: - Delete
+    // MARK: - Group Operations
+
+    private func applyGroupEdit(target: GroupEditorTarget, name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        switch target.kind {
+        case .create:
+            if let path = target.projectPath {
+                groupAssignments[path] = trimmed
+                expandedGroups.insert(trimmed)
+            }
+        case .rename(let oldName):
+            for (path, group) in groupAssignments where group == oldName {
+                groupAssignments[path] = trimmed
+            }
+            if expandedGroups.contains(oldName) {
+                expandedGroups.remove(oldName)
+                expandedGroups.insert(trimmed)
+            }
+        }
+        saveGroupAssignments()
+    }
+
+    private func deleteGroup(named groupName: String) {
+        for (path, group) in groupAssignments where group == groupName {
+            groupAssignments.removeValue(forKey: path)
+        }
+        expandedGroups.remove(groupName)
+        saveGroupAssignments()
+    }
+
+    // MARK: - Delete Session
 
     private func deleteCLISession(_ session: CLISession, projectPath: String) {
         let encoded = AppState.claudeProjectDirName(for: projectPath)
         let file = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".claude/projects/\(encoded)/\(session.id).jsonl")
         try? FileManager.default.removeItem(at: file)
-        // Remove from local state
         if let pi = cliProjects.firstIndex(where: { $0.path == projectPath }) {
             let filtered = cliProjects[pi].sessions.filter { $0.id != session.id }
             if filtered.isEmpty {
@@ -317,30 +515,28 @@ struct CLISessionsView: View {
             let name = URL(fileURLWithPath: projectPath).lastPathComponent
             appState.addProject(Project(name: name, path: projectPath, gitHubRepo: nil))
         }
-
         guard let project = appState.projects.first(where: { $0.path == projectPath }) else { return }
-
         if windowState.selectedProject?.id != project.id {
             appState.openProjectIds.insert(project.id)
             windowState.selectedProject = project
             UserDefaults.standard.set(project.id.uuidString, forKey: "selectedProjectId")
         }
-
         let chatSession = ChatSession(
-            id: session.id,
-            projectId: project.id,
-            title: session.title,
-            messages: [],
-            createdAt: session.modifiedAt,
-            updatedAt: session.modifiedAt
+            id: session.id, projectId: project.id, title: session.title,
+            messages: [], createdAt: session.modifiedAt, updatedAt: session.modifiedAt
         )
         if !appState.allSessionSummaries.contains(where: { $0.id == session.id }) {
             appState.allSessionSummaries.insert(chatSession.summary, at: 0)
             Task { try? await appState.persistence.saveSession(chatSession) }
         }
-
         windowState.previewCLISession = nil
         Task { await appState.resumeSession(chatSession, in: windowState) }
+    }
+
+    // MARK: - Persistence
+
+    private func saveGroupAssignments() {
+        UserDefaults.standard.set(groupAssignments, forKey: "cliSessionGroupAssignments")
     }
 
     // MARK: - Load
@@ -353,7 +549,6 @@ struct CLISessionsView: View {
         let projectsDir = home.appendingPathComponent(".claude/projects")
         let fm = FileManager.default
 
-        // Load titles from history.jsonl
         var titles: [String: String] = [:]
         let historyFile = home.appendingPathComponent(".claude/history.jsonl")
         if let data = try? Data(contentsOf: historyFile), let text = String(data: data, encoding: .utf8) {
@@ -369,14 +564,12 @@ struct CLISessionsView: View {
         }
         sessionTitles = titles
 
-        // Scan project directories
         guard let dirs = try? fm.contentsOfDirectory(at: projectsDir, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) else { return }
 
         var projects: [CLIProject] = []
         for dir in dirs where dir.hasDirectoryPath {
             let decodedPath = AppState.pathFromClaudeProjectDir(dir.lastPathComponent)
             guard fm.fileExists(atPath: decodedPath) else { continue }
-
             guard let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.contentModificationDateKey], options: .skipsHiddenFiles) else { continue }
 
             let sessions: [CLISession] = files
@@ -390,20 +583,13 @@ struct CLISessionsView: View {
                 .sorted { $0.modifiedAt > $1.modifiedAt }
 
             guard !sessions.isEmpty else { continue }
-
             let displayName = URL(fileURLWithPath: decodedPath).lastPathComponent
             projects.append(CLIProject(path: decodedPath, displayName: displayName, sessions: sessions))
         }
 
         cliProjects = projects.sorted { $0.sessions.first?.modifiedAt ?? .distantPast > $1.sessions.first?.modifiedAt ?? .distantPast }
-
-        // Auto-expand first project
-        if let first = cliProjects.first {
-            expandedProjects.insert(first.id)
-        }
+        if let first = cliProjects.first { expandedProjects.insert(first.id) }
     }
-
-    // MARK: - Helpers
 
     private static let relativeDateFormatter: RelativeDateTimeFormatter = {
         let f = RelativeDateTimeFormatter()
@@ -413,6 +599,74 @@ struct CLISessionsView: View {
 
     private func formattedDate(_ date: Date) -> String {
         Self.relativeDateFormatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+// MARK: - Group Name Editor Sheet
+
+struct GroupEditorTarget: Identifiable {
+    enum Kind {
+        case create
+        case rename(from: String)
+    }
+    let id = UUID()
+    let kind: Kind
+    let projectPath: String?
+
+    var title: String {
+        switch kind {
+        case .create: return "New Group"
+        case .rename: return "Rename Group"
+        }
+    }
+
+    var placeholder: String {
+        switch kind {
+        case .create: return "e.g. Work, Personal…"
+        case .rename(let old): return old
+        }
+    }
+}
+
+struct GroupNameEditorSheet: View {
+    let target: GroupEditorTarget
+    let onConfirm: (String) -> Void
+
+    @State private var name: String = ""
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var fieldFocused: Bool
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text(target.title)
+                .font(.headline)
+            TextField(target.placeholder, text: $name)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 260)
+                .focused($fieldFocused)
+                .onSubmit { commit() }
+            HStack(spacing: 12) {
+                Button("Cancel", role: .cancel) { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Save") { commit() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .buttonStyle(.borderedProminent)
+                    .tint(ClaudeTheme.accent)
+            }
+        }
+        .padding(24)
+        .onAppear {
+            if case .rename(let old) = target.kind { name = old }
+            fieldFocused = true
+        }
+    }
+
+    private func commit() {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        onConfirm(trimmed)
+        dismiss()
     }
 }
 
@@ -432,6 +686,7 @@ struct CLISession: Identifiable {
 }
 
 enum FocusItem: Hashable {
+    case group(String)
     case folder(String)
     case session(String)
 }

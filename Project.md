@@ -15,8 +15,8 @@ Remotes: `origin` → psrivastava/Clarc, `upstream` → ttnear/Clarc
 ## Build
 
 ```bash
-./build.sh            # clean build only (output: ./build/Build/Products/Release/Clarc.app)
-./build.sh --deploy   # build + kill running + ditto to /Applications + checksum verify + launch
+./build.sh              # clean build + deploy to /Applications + checksum verify + launch
+./build.sh --build-only # build only, no deploy (output: ./build/Build/Products/Release/Clarc.app)
 ```
 
 - `DEVELOPER_DIR` defaults to `xcode-select -p`, override with env var
@@ -95,6 +95,14 @@ Standalone view — reads directly from `~/.claude/projects/` and `~/.claude/his
 - Font family picker + size stepper + live preview
 - Color scheme dropdown
 
+### 2026-05-11 — Session/Permission/Grouping improvements
+
+| File | What changed |
+|------|-------------|
+| `CLISessionsView.swift` | Fix: `loadPreview` no longer clears `selectedProject` — clicking a CLI session while a project chat is active is now a no-op (use context-menu Resume). Added session **Grouping**: folder-button in header toggles grouped view; project rows get right-click "Grouping" submenu to assign/remove/create groups; groups stored in UserDefaults key `cliSessionGroupAssignments`. Added `FocusItem.group` case for keyboard nav. |
+| `AppState.swift` | Fix: `setSessionPermissionMode` now calls `permission.registerSession` with the new mode so PermissionServer honors mid-session permission changes immediately. |
+| `SettingsView.swift` | New **Permissions** tab (tag 5) — reads global default from `~/.claude/settings.json` and per-project overrides from each project's `.claude/settings.json`. No new data store; reads Claude Code's own config. |
+
 ## Known Constraints
 
 - SPM package resolution blocked by kiro-cli sandbox — build from regular terminal
@@ -135,3 +143,7 @@ Resolved 4 conflicts:
 | `TerminalView.swift` | Keep both | Fork's terminal styling properties + upstream's `focusTrigger` property |
 
 **Strategy:** All 5 conflicts were independent additions (fork features vs upstream features) — kept both sides in every case.
+
+### 2026-05-09 — Merge `main` → `psrivastava` (`cd343f2`)
+
+No conflicts. Upstream v1.2.5 (build 24) merged cleanly — includes fix for "No response requested." marker strip (#10) and JSONL reconciliation fix (#9).

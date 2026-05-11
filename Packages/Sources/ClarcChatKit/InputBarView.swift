@@ -269,6 +269,8 @@ struct InputBarView<Accessory: View, TopAccessory: View>: View {
             slashSelectedIndex = (slashSelectedIndex - 1 + count) % count
             return .handled
         }
+        // Only cycle history when the input is empty; otherwise let the cursor move freely.
+        guard windowState.inputText.isEmpty else { return .ignored }
         let history = userMessageHistory
         guard !history.isEmpty else { return .ignored }
         let nextIndex = historyIndex + 1

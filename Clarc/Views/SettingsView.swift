@@ -41,6 +41,12 @@ struct SettingsView: View {
                     Label("Shortcuts", systemImage: "bolt.fill")
                 }
                 .tag(4)
+
+            PermissionsSettingsTab()
+                .tabItem {
+                    Label("Permissions", systemImage: "lock.shield")
+                }
+                .tag(5)
         }
         .frame(width: 680, height: 620)
         .focusable(false)
@@ -662,6 +668,152 @@ private struct ThemePickerRow: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
+    }
+}
+
+// MARK: - Permissions Settings Tab
+
+struct PermissionsSettingsTab: View {
+    @Environment(AppState.self) private var appState
+
+    @State private var globalMode: PermissionMode = .default
+    @State private var projectOverrides: [(path: String, name: String, mode: PermissionMode)] = []
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                globalSection
+                Divider()
+                projectSection
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .onAppear { reload() }
+    }
+
+    // MARK: - Global Section
+
+    private var globalSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Global Default")
+                .font(.system(size: 13, weight: .semibold))
+
+            Text("Stored in ~/.claude/settings.json — applies to all new Claude Code sessions.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 8) {
+                permBadge(globalMode)
+                Text(AppState.permissionModeDescription(globalMode))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(ClaudeTheme.surfaceSecondary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+
+            Text("To change the global default, edit ~/.claude/settings.json or use the permission picker in any chat session toolbar.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Per-Project Section
+
+    private var projectSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Per-Project Overrides")
+                .font(.system(size: 13, weight: .semibold))
+
+            Text("Stored in each project's .claude/settings.json file.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            if projectOverrides.isEmpty {
+                Text("No per-project overrides found.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 8)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(projectOverrides.indices, id: \.self) { idx in
+                        let item = projectOverrides[idx]
+                        HStack(spacing: 10) {
+                            permBadge(item.mode)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.name)
+                                    .font(.system(size: 12, weight: .medium))
+                                Text(item.path)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.head)
+                            }
+                            Spacer()
+                            Text(item.mode.displayName)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(idx % 2 == 0 ? ClaudeTheme.surfaceSecondary.opacity(0.3) : Color.clear)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color(NSColor.separatorColor), lineWidth: 1))
+            }
+
+            Button {
+                reload()
+            } label: {
+                Label("Refresh", systemImage: "arrow.clockwise")
+                    .font(.system(size: 12))
+            }
+            .buttonStyle(.borderless)
+        }
+    }
+
+    // MARK: - Helper
+
+    private func permBadge(_ mode: PermissionMode) -> some View {
+        let color: Color = switch mode {
+        case .bypassPermissions: .red
+        case .auto: .orange
+        case .acceptEdits: .yellow
+        case .plan: .blue
+        case .default: .green
+        }
+        return Circle()
+            .fill(color)
+            .frame(width: 8, height: 8)
+    }
+
+    private func reload() {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+
+        // Global
+        let globalFile = home.appendingPathComponent(".claude/settings.json")
+        globalMode = readPermissionMode(from: globalFile) ?? .default
+
+        // Per-project: scan known projects + all projects in appState
+        var found: [(path: String, name: String, mode: PermissionMode)] = []
+        for project in appState.projects {
+            let settingsFile = URL(fileURLWithPath: project.path)
+                .appendingPathComponent(".claude/settings.json")
+            if let mode = readPermissionMode(from: settingsFile), mode != .default {
+                found.append((path: project.path, name: project.name, mode: mode))
+            }
+        }
+        projectOverrides = found.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private func readPermissionMode(from url: URL) -> PermissionMode? {
+        guard let data = try? Data(contentsOf: url),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let perms = json["permissions"] as? [String: Any],
+              let mode = perms["defaultMode"] as? String else { return nil }
+        return PermissionMode(rawValue: mode)
     }
 }
 

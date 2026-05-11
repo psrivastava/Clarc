@@ -372,6 +372,12 @@ final class AppState {
         window.sessionPermissionMode = mode
         let key = window.currentSessionId ?? window.newSessionKey
         updateState(key) { $0.permissionMode = mode }
+        // Re-register with PermissionServer so in-flight tool requests immediately
+        // honor the new mode without waiting for the next send() call.
+        if let sid = window.currentSessionId,
+           let project = window.selectedProject {
+            Task { await permission.registerSession(sid: sid, projectKey: project.path, mode: mode) }
+        }
     }
 
     func modelDisplayName(for model: String, in window: WindowState) -> String {
@@ -1751,11 +1757,15 @@ final class AppState {
 
         UserDefaults.standard.set(project.id.uuidString, forKey: "selectedProjectId")
 
-        // Refresh session history in the background
+        // Refresh session history, then restore the last-active session for this project
         Task { [weak self] in
             guard let self else { return }
             await importClaudeCodeSessions(in: window)
             await loadSessionHistory(in: window)
+            if let lastId = project.lastSessionId,
+               allSessionSummaries.contains(where: { $0.id == lastId }) {
+                selectSession(id: lastId, in: window)
+            }
         }
     }
 
